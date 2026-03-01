@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────
-   simulator.js  –  Arduino code transpiler + execution
+   simulator.js  –  Arduino → JS transpiler + execution
                     engine + visual board renderer.
    ───────────────────────────────────────────────────────── */
 
@@ -8,70 +8,75 @@ class ArduinoTranspiler {
   transpile(code) {
     let js = code;
 
-    // ── Strip #include / #define directives ──────────────
-    js = js.replace(/^\s*#(include|define|pragma)[^\n]*/gm, '// (preprocessor removed)');
+    // Strip preprocessor directives
+    js = js.replace(/^\s*#(include|define|pragma|ifndef|endif|ifdef)[^\n]*/gm, '');
 
-    // ── C++ type declarations → let / const ─────────────
-    // unsigned variants first
-    js = js.replace(/\bunsigned\s+(long|int|char|short)\b/g, 'let ___unsigned');
-    js = js.replace(/\b(uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t|size_t)\b/g, 'let ___int');
-    // standard types before variables
+    // Unsigned / fixed-width types → let placeholder
+    js = js.replace(/\bunsigned\s+(long|int|char|short)\b/g, 'let ___T');
+    js = js.replace(/\b(uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t|size_t)\b/g, 'let ___T');
+
+    // Standard type declarations before variable names
     js = js.replace(/\b(long|int|float|double|boolean|bool|byte|char|word|short)\s+(?=[a-zA-Z_])/g, 'let ');
     js = js.replace(/\bString\s+(?=[a-zA-Z_])/g, 'let ');
-    // Fix "const let" → "const"
-    js = js.replace(/\bconst\s+let\s+/g, 'const ');
-    js = js.replace(/\bconst\s+___\w+\s+/g, 'const ');
-    js = js.replace(/\blet\s+___\w+\s+/g, 'let ');
-    // for-loop initializers
-    js = js.replace(/\bfor\s*\(\s*(unsigned\s+)?(long|int|float|double|bool|boolean|byte|char|word)\s+/g, 'for (let ');
 
-    // ── void functions → async functions ─────────────────
-    js = js.replace(/\bvoid\s+(setup)\s*\(\s*\)/g, 'async function _setup()');
-    js = js.replace(/\bvoid\s+(loop)\s*\(\s*\)/g, 'async function _loop()');
+    // Fix "const let" / "let ___T" → const / let
+    js = js.replace(/\bconst\s+let\s+/g, 'const ');
+    js = js.replace(/\bconst\s+___T\s+/g, 'const ');
+    js = js.replace(/\blet\s+___T\s+/g, 'let ');
+
+    // for-loop initializers: "for(int i" → "for(let i"
+    js = js.replace(/\bfor\s*\(\s*(?:unsigned\s+)?(?:long|int|float|double|bool|boolean|byte|char|word)\s+/g, 'for (let ');
+
+    // void setup()/loop() → async functions
+    js = js.replace(/\bvoid\s+setup\s*\(\s*\)/g,  'async function _setup()');
+    js = js.replace(/\bvoid\s+loop\s*\(\s*\)/g,   'async function _loop()');
     js = js.replace(/\bvoid\s+([a-zA-Z_]\w*)\s*\(/g, 'async function $1(');
-    // typed functions (int, float, etc.)
-    js = js.replace(/\b(?:int|float|double|long|bool|boolean|byte|char|String|word)\s+([a-zA-Z_]\w*)\s*\(/g, 'async function $1(');
-    // typed function parameters – remove type from params
-    // (handled via generic param stripping below)
+
+    // Typed functions (int foo(), float bar(), etc.)
+    js = js.replace(/\b(?:int|float|double|long|bool|boolean|byte|char|String|word)\s+([a-zA-Z_]\w*)\s*\(\s*/g,
+      'async function $1(');
 
     // ── Constants ────────────────────────────────────────
-    js = js.replace(/\bHIGH\b/g, '1');
-    js = js.replace(/\bLOW\b/g,  '0');
+    js = js.replace(/\bHIGH\b/g,         '1');
+    js = js.replace(/\bLOW\b/g,          '0');
     js = js.replace(/\bOUTPUT\b/g,       '"OUTPUT"');
     js = js.replace(/\bINPUT_PULLUP\b/g, '"INPUT_PULLUP"');
     js = js.replace(/\bINPUT\b/g,        '"INPUT"');
     js = js.replace(/\bLED_BUILTIN\b/g,  '13');
     js = js.replace(/\bPI\b/g,           'Math.PI');
-    js = js.replace(/\bTWO_PI\b/g,       '(2*Math.PI)');
-    js = js.replace(/\bHALF_PI\b/g,      '(Math.PI/2)');
     js = js.replace(/\btrue\b/g,         'true');
     js = js.replace(/\bfalse\b/g,        'false');
     js = js.replace(/\bNULL\b/g,         'null');
 
-    // ── Analog pin names A0-A5 ───────────────────────────
+    // Analog pin names A0–A5
     js = js.replace(/\bA([0-5])\b/g, 'sim.A$1');
 
-    // ── Arduino functions → sim.* ─────────────────────────
-    js = js.replace(/\bpinMode\s*\(/g,             'sim.pinMode(');
-    js = js.replace(/\bdigitalWrite\s*\(/g,         'sim.digitalWrite(');
-    js = js.replace(/\bdigitalRead\s*\(/g,          'await sim.digitalRead(');
-    js = js.replace(/\banalogWrite\s*\(/g,          'sim.analogWrite(');
-    js = js.replace(/\banalogRead\s*\(/g,           'sim.analogRead(');
-    js = js.replace(/\bdelay\s*\(/g,                'await sim.delay(');
-    js = js.replace(/\bdelayMicroseconds\s*\(/g,    'await sim.delayMicroseconds(');
-    js = js.replace(/\bmillis\s*\(/g,               'sim.millis(');
-    js = js.replace(/\bmicros\s*\(/g,               'sim.micros(');
-    js = js.replace(/\bSerial\.begin\s*\(/g,        'sim.serialBegin(');
-    js = js.replace(/\bSerial\.print\b(?!ln)/g,     'sim.print');
-    js = js.replace(/\bSerial\.println\s*\(/g,      'sim.println(');
-    js = js.replace(/\bSerial\.print\s*\(/g,        'sim.print(');
-    js = js.replace(/\bSerial\.available\s*\(/g,    'sim.serialAvailable(');
-    js = js.replace(/\bSerial\.read\s*\(/g,         'sim.serialRead(');
-    js = js.replace(/\bmap\s*\(/g,                  'sim.map(');
-    js = js.replace(/\bconstrain\s*\(/g,            'sim.constrain(');
-    js = js.replace(/\brandom\s*\(/g,               'sim.random(');
-    js = js.replace(/\btone\s*\(/g,                 'sim.tone(');
-    js = js.replace(/\bnoTone\s*\(/g,               'sim.noTone(');
+    // ── Serial — println MUST come before print ──────────
+    js = js.replace(/\bSerial\.println\s*\(/g,   'sim.println(');
+    js = js.replace(/\bSerial\.print\s*\(/g,     'sim.print(');
+    js = js.replace(/\bSerial\.begin\s*\(/g,     'sim.serialBegin(');
+    js = js.replace(/\bSerial\.available\s*\(/g, 'sim.serialAvailable(');
+    js = js.replace(/\bSerial\.read\s*\(/g,      'sim.serialRead(');
+
+    // ── Arduino I/O ──────────────────────────────────────
+    js = js.replace(/\bpinMode\s*\(/g,          'sim.pinMode(');
+    js = js.replace(/\bdigitalWrite\s*\(/g,      'sim.digitalWrite(');
+    js = js.replace(/\bdigitalRead\s*\(/g,       'await sim.digitalRead(');
+    js = js.replace(/\banalogWrite\s*\(/g,       'sim.analogWrite(');
+    js = js.replace(/\banalogRead\s*\(/g,        'sim.analogRead(');
+
+    // ── Time ─────────────────────────────────────────────
+    js = js.replace(/\bdelayMicroseconds\s*\(/g, 'await sim.delayMicroseconds(');
+    js = js.replace(/\bdelay\s*\(/g,             'await sim.delay(');
+    js = js.replace(/\bmillis\s*\(/g,            'sim.millis(');
+    js = js.replace(/\bmicros\s*\(/g,            'sim.micros(');
+
+    // ── Misc Arduino ─────────────────────────────────────
+    js = js.replace(/\bmap\s*\(/g,      'sim.map(');
+    js = js.replace(/\bconstrain\s*\(/, 'sim.constrain(');
+    js = js.replace(/\brandom\s*\(/g,   'sim.random(');
+    js = js.replace(/\btone\s*\(/g,     'sim.tone(');
+    js = js.replace(/\bnoTone\s*\(/g,   'sim.noTone(');
 
     // ── Math aliases ─────────────────────────────────────
     js = js.replace(/\babs\s*\(/g,   'Math.abs(');
@@ -87,25 +92,23 @@ class ArduinoTranspiler {
     js = js.replace(/\bfloor\s*\(/g, 'Math.floor(');
     js = js.replace(/\bceil\s*\(/g,  'Math.ceil(');
 
-    // ── Remove typed function parameters ─────────────────
+    // Strip type annotations from function parameters
     // e.g. "async function blink(int pin, int times)" → "async function blink(pin, times)"
-    js = js.replace(/async\s+function\s+\w+\s*\([^)]*\)/g, (match) => {
-      return match.replace(/\b(?:unsigned\s+)?(?:int|float|double|long|bool|boolean|byte|char|word|String)\s+(\w)/g, '$1');
+    js = js.replace(/(async\s+function\s+\w+\s*\()([^)]*)\)/g, (_, head, params) => {
+      const cleaned = params.replace(/\b(?:unsigned\s+)?(?:int|float|double|long|bool|boolean|byte|char|word|String)\s+(\w)/g, '$1');
+      return head + cleaned + ')';
     });
 
-    // ── Two-pass: add await to user-defined async calls ──
-    // First collect user function names
+    // Two-pass: add await before user-defined async function calls
     const userFuncs = new Set();
     const fnRe = /async\s+function\s+(\w+)\s*\(/g;
-    let fm;
-    while ((fm = fnRe.exec(js)) !== null) {
-      if (fm[1] !== '_setup' && fm[1] !== '_loop') {
-        userFuncs.add(fm[1]);
-      }
+    let m;
+    while ((m = fnRe.exec(js)) !== null) {
+      if (m[1] !== '_setup' && m[1] !== '_loop') userFuncs.add(m[1]);
     }
-    // Then prefix calls with await (if not already)
     userFuncs.forEach(name => {
-      const re = new RegExp(`(?<!await\\s{0,15})(?<!async\\s+function\\s+)\\b${name}\\s*\\(`, 'g');
+      // Don't re-add await if already present
+      const re = new RegExp(`(?<!await\\s{0,20})(?<!async\\s+function\\s+)\\b${name}\\s*\\(`, 'g');
       js = js.replace(re, `await ${name}(`);
     });
 
@@ -113,15 +116,16 @@ class ArduinoTranspiler {
   }
 }
 
-// ── SimObject — the "hardware" seen by transpiled code ─────
+// ── SimObject — "hardware" seen by transpiled code ─────────
 class SimObject {
-  constructor(board) {
-    this._board = board;    // reference to ArduinoBoard
+  constructor(board, fastMode = false) {
+    this._board   = board;
     this.running  = false;
+    this.fastMode = fastMode;           // fast = no real delays (for challenge check)
     this._startMs = Date.now();
-    this._maxLoops = 5000;
+    this._maxLoops = fastMode ? 40 : 8; // 8 visual loops, 40 fast validation loops
     this._loopCount = 0;
-    this.serialLines = [];
+    this.serialLines  = [];
     this.serialUsed   = false;
     this.pwmUsed      = false;
 
@@ -130,7 +134,7 @@ class SimObject {
     this.A3 = 103; this.A4 = 104; this.A5 = 105;
   }
 
-  // ── Pin ──────────────────────────────────────────────
+  // ── Pin I/O ───────────────────────────────────────────
   pinMode(pin, mode) {
     this._board.setPinMode(pin, mode);
   }
@@ -141,25 +145,27 @@ class SimObject {
   analogWrite(pin, val) {
     if (!this.running) return;
     this.pwmUsed = true;
-    val = Math.max(0, Math.min(255, Math.round(val)));
+    val = Math.max(0, Math.min(255, Math.round(+val || 0)));
     this._board.setPWM(pin, val);
   }
   analogRead(pin) {
-    // Pin 100-105 → A0-A5
-    if (pin >= 100 && pin <= 105) {
-      return this._board.getAnalog(pin - 100);
-    }
+    if (pin >= 100 && pin <= 105) return this._board.getAnalog(pin - 100);
     return 0;
   }
   async digitalRead(pin) {
     return this._board.getDigital(pin);
   }
 
-  // ── Time ─────────────────────────────────────────────
+  // ── Timing ───────────────────────────────────────────
   async delay(ms) {
     if (!this.running) throw new Error('STOPPED');
-    ms = Math.min(ms, 5000); // cap at 5s to prevent lockup
-    await new Promise(r => setTimeout(r, ms));
+    if (this.fastMode) {
+      // yield to event loop but don't wait
+      await new Promise(r => setTimeout(r, 1));
+    } else {
+      ms = Math.min(+ms || 0, 600); // cap real delays at 600ms
+      await new Promise(r => setTimeout(r, ms));
+    }
     if (!this.running) throw new Error('STOPPED');
   }
   async delayMicroseconds(us) {
@@ -168,9 +174,10 @@ class SimObject {
   millis() { return Date.now() - this._startMs; }
   micros() { return (Date.now() - this._startMs) * 1000; }
 
-  // ── Serial ───────────────────────────────────────────
+  // ── Serial ────────────────────────────────────────────
   serialBegin(baud) {
-    this._board.appendSerial(`Serial started at ${baud} baud`, 'info');
+    if (!this.fastMode)
+      this._board.appendSerial(`Serial started @ ${baud} baud`, 'info');
   }
   print(val) {
     this.serialUsed = true;
@@ -183,7 +190,7 @@ class SimObject {
     this._board.flushSerial(str);
   }
   serialAvailable() { return 0; }
-  serialRead() { return -1; }
+  serialRead()      { return -1; }
 
   // ── Math helpers ──────────────────────────────────────
   map(val, fL, fH, tL, tH) {
@@ -194,34 +201,34 @@ class SimObject {
     if (b === undefined) return Math.floor(Math.random() * a);
     return Math.floor(Math.random() * (b - a)) + a;
   }
-  sq(x) { return x * x; }
+  sq(x)     { return x * x; }
   tone(pin, freq, dur) {
-    this._board.appendSerial(`tone(pin${pin}, ${freq}Hz${dur ? ', '+dur+'ms' : ''})`, 'info');
+    if (!this.fastMode)
+      this._board.appendSerial(`♪ tone(pin${pin}, ${freq}Hz${dur ? ', ' + dur + 'ms' : ''})`, 'info');
   }
-  noTone(pin) {}
+  noTone() {}
 }
 
 // ── ArduinoBoard — visual board + runner ──────────────────
 class ArduinoBoard {
   constructor(containerEl) {
-    this._el = containerEl;
-    this._pins = {};      // pin → { mode, digital, pwm }
-    this._analog = [512, 512, 512, 512, 512, 512]; // A0–A5
-    this._serialBuf = ''; // current line buffer
-    this.sim = null;
+    this._el      = containerEl;
+    this._pins    = {};
+    this._analog  = [512, 512, 512, 512, 512, 512];
+    this._serialBuf = '';
+    this.sim      = null;
     this._running = false;
-    this._stopFn  = null;
     this._render();
   }
 
-  // ── Board rendering ───────────────────────────────────
+  // ── Board HTML ────────────────────────────────────────
   _render() {
     this._el.innerHTML = `
       <div class="arduino-board">
         <div class="board-title">⚡ Arduino Uno Simulator</div>
 
         <div class="main-led-wrap">
-          <div class="main-led" id="sim-led-13">💡</div>
+          <div class="main-led" id="sim-led-13">○</div>
           <div class="main-led-label">Pin 13 — LED_BUILTIN</div>
         </div>
 
@@ -229,15 +236,15 @@ class ArduinoBoard {
           <div class="pin-row-label">Digital Pins</div>
           <div class="pin-row" id="sim-pin-row">
             ${[2,3,4,5,6,7,8,9,10,11,12].map(p => `
-              <div class="pin-item">
+              <div class="pin-item" title="Pin ${p}${[3,5,6,9,10,11].includes(p) ? ' (PWM~)' : ''}">
                 <div class="pin-led" id="sim-pin-${p}"></div>
-                <div class="pin-num">${p}${[3,5,6,9,10,11].includes(p)?'~':''}</div>
+                <div class="pin-num">${p}${[3,5,6,9,10,11].includes(p) ? '~' : ''}</div>
               </div>`).join('')}
           </div>
         </div>
 
         <div>
-          <div class="pin-row-label">Analog Inputs (drag sliders)</div>
+          <div class="pin-row-label">Analog Inputs — drag to set value</div>
           <div class="analog-row">
             ${[0,1,2,3,4,5].map(i => `
               <div class="analog-item">
@@ -247,7 +254,7 @@ class ArduinoBoard {
                 </div>
                 <input type="range" class="analog-slider" id="sim-a${i}"
                   min="0" max="1023" value="512"
-                  oninput="window._board.setAnalogSlider(${i}, this.value)" />
+                  oninput="if(window._board){window._board.setAnalogSlider(${i},this.value)}" />
               </div>`).join('')}
           </div>
         </div>
@@ -256,16 +263,18 @@ class ArduinoBoard {
       <div class="serial-monitor">
         <div class="serial-head">
           <strong>Serial Monitor</strong>
-          <span style="color:var(--text3);font-size:.68rem"> @ 9600 baud</span>
-          <button class="serial-clear-btn" onclick="window._board.clearSerial()">Clear</button>
+          <span style="color:var(--text3);font-size:.68rem">&nbsp;@ 9600 baud</span>
+          <button class="serial-clear-btn" onclick="if(window._board)window._board.clearSerial()">Clear</button>
         </div>
-        <div class="serial-output" id="sim-serial"></div>
+        <div class="serial-output" id="sim-serial">
+          <div class="ser-info">— Simulator ready. Click ▶ Run to execute your sketch. —</div>
+        </div>
       </div>
     `;
     window._board = this;
   }
 
-  // ── Pin state management ──────────────────────────────
+  // ── Pin state ─────────────────────────────────────────
   setPinMode(pin, mode) {
     this._pins[pin] = this._pins[pin] || {};
     this._pins[pin].mode = mode;
@@ -274,18 +283,16 @@ class ArduinoBoard {
     this._pins[pin] = this._pins[pin] || {};
     this._pins[pin].digital = val;
     this._pins[pin].pwm = null;
-    this._updatePin(pin, val, null);
+    this._updatePinEl(pin, val, null);
   }
   setPWM(pin, val) {
     this._pins[pin] = this._pins[pin] || {};
     this._pins[pin].digital = val > 0 ? 1 : 0;
     this._pins[pin].pwm = val;
-    this._updatePin(pin, null, val);
+    this._updatePinEl(pin, null, val);
   }
-  getDigital(pin) {
-    return (this._pins[pin] && this._pins[pin].digital) ? 1 : 0;
-  }
-  getAnalog(idx) { return this._analog[idx]; }
+  getDigital(pin)  { return (this._pins[pin] && this._pins[pin].digital) ? 1 : 0; }
+  getAnalog(idx)   { return this._analog[idx] || 0; }
 
   setAnalogSlider(idx, val) {
     this._analog[idx] = parseInt(val);
@@ -293,29 +300,28 @@ class ArduinoBoard {
     if (lbl) lbl.textContent = val;
   }
 
-  _updatePin(pin, digital, pwm) {
+  _updatePinEl(pin, digital, pwm) {
+    // Special: pin 13 drives the big LED
     if (pin === 13) {
       const el = document.getElementById('sim-led-13');
-      if (!el) return;
-      if (pwm !== null) {
-        const op = (pwm / 255).toFixed(2);
-        el.className = `main-led pwm-glow`;
-        el.style.setProperty('--pwm-op', op);
-        el.textContent = pwm > 0 ? '💡' : '○';
-      } else {
-        el.className = `main-led${digital ? ' on' : ''}`;
-        el.style.removeProperty('--pwm-op');
-        el.textContent = digital ? '💡' : '○';
+      if (el) {
+        if (pwm !== null) {
+          const op = (pwm / 255).toFixed(2);
+          el.className = 'main-led pwm-glow';
+          el.style.setProperty('--pwm-op', op);
+          el.textContent = pwm > 0 ? '💡' : '○';
+        } else {
+          el.className = `main-led${digital ? ' on' : ''}`;
+          el.style.removeProperty('--pwm-op');
+          el.textContent = digital ? '💡' : '○';
+        }
       }
-    } else if (pin === 12) {
-      // treat pin 12 like any other pin (handled below)
     }
-    // Generic pin LED
+    // Generic numbered pin LED (2-12)
     const el = document.getElementById(`sim-pin-${pin}`);
     if (!el) return;
     if (pwm !== null) {
-      const op = pwm / 255;
-      el.style.setProperty('--pwm', op.toFixed(2));
+      el.style.setProperty('--pwm', (pwm / 255).toFixed(2));
       el.className = 'pin-led pwm';
     } else {
       el.style.removeProperty('--pwm');
@@ -326,12 +332,13 @@ class ArduinoBoard {
   // ── Serial output ─────────────────────────────────────
   appendSerial(text, cls = '') {
     const out = document.getElementById('sim-serial');
-    if (!out) return;
-    const div = document.createElement('div');
-    div.className = cls === 'info' ? 'ser-info' : (cls === 'error' ? 'ser-error' : 'ser-line');
-    div.textContent = text;
-    out.appendChild(div);
-    out.scrollTop = out.scrollHeight;
+    if (out) {
+      const div = document.createElement('div');
+      div.className = cls === 'info' ? 'ser-info' : cls === 'error' ? 'ser-error' : 'ser-line';
+      div.textContent = text;
+      out.appendChild(div);
+      out.scrollTop = out.scrollHeight;
+    }
     if (this.sim) this.sim.serialLines.push(text);
   }
   appendSerialRaw(text) {
@@ -348,19 +355,17 @@ class ArduinoBoard {
     if (this.sim) this.sim.serialLines = [];
   }
 
-  // ── Execution ─────────────────────────────────────────
-  async run(code) {
+  // ── Core run engine ───────────────────────────────────
+  async _execute(code, fastMode) {
     if (this._running) await this.stop();
 
     this._running = true;
-    this.clearSerial();
     this._resetAllPins();
 
-    this.sim = new SimObject(this);
-    this.sim.running = true;
-    this.sim.serialLines = [];
+    this.sim           = new SimObject(this, fastMode);
+    this.sim.running   = true;
+    this._serialBuf    = '';
 
-    // Transpile
     const transpiler = new ArduinoTranspiler();
     let js;
     try {
@@ -371,79 +376,99 @@ class ArduinoBoard {
       return;
     }
 
-    // Build execution body
     const body = `
       ${js}
-      if (typeof _setup === 'function') { await _setup(); }
+      if (typeof _setup === 'function') await _setup();
       let _lc = 0;
-      while (sim.running && _lc < sim._maxLoops) {
+      const _max = sim._maxLoops;
+      while (sim.running && _lc < _max) {
         _lc++;
-        if (typeof _loop === 'function') { await _loop(); }
-        else { break; }
-        if (_lc % 200 === 0) await new Promise(r => setTimeout(r, 0));
+        if (typeof _loop === 'function') await _loop();
+        else break;
+        if (_lc % 10 === 0) await new Promise(r => setTimeout(r, 0));
       }
     `;
 
-    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
     let fn;
     try {
-      fn = new AsyncFunction('sim', body);
+      const AF = Object.getPrototypeOf(async function(){}).constructor;
+      fn = new AF('sim', body);
     } catch (e) {
-      this.appendSerial(`[Compile error] ${e.message}`, 'error');
+      this.appendSerial(`[Syntax error] ${e.message}`, 'error');
       this._running = false;
+      this._updateStatus('error');
       return;
     }
 
-    this._updateStatus('running');
-
+    if (!fastMode) this._updateStatus('running');
     try {
       await fn(this.sim);
     } catch (e) {
       if (e.message !== 'STOPPED') {
         this.appendSerial(`[Runtime error] ${e.message}`, 'error');
+        if (!fastMode) this._updateStatus('error');
       }
     }
 
+    // Flush any trailing print() without println()
+    if (this._serialBuf) this.flushSerial();
+
     this._running = false;
     this.sim.running = false;
-    this._updateStatus('idle');
-    if (this._serialBuf) this.flushSerial();
+    if (!fastMode) this._updateStatus('idle');
+  }
+
+  // ── Public API ────────────────────────────────────────
+
+  /** Visual run — real delays (capped), ~8 loop iterations */
+  async run(code) {
+    this.clearSerial();
+    await this._execute(code, false);
+  }
+
+  /** Fast validation run — no delays, 40 iterations, no DOM spam */
+  async runForCheck(code) {
+    const prevSerial = document.getElementById('sim-serial')?.innerHTML;
+    await this._execute(code, true);
+    // Restore serial display after fast run so user still sees previous output
+    const out = document.getElementById('sim-serial');
+    if (out && prevSerial) out.innerHTML = prevSerial;
   }
 
   async stop() {
     if (this.sim) this.sim.running = false;
     this._running = false;
-    await new Promise(r => setTimeout(r, 120));
+    await new Promise(r => setTimeout(r, 150));
     this._updateStatus('idle');
   }
 
+  isRunning() { return this._running; }
+
+  getState() {
+    return {
+      pins:        JSON.parse(JSON.stringify(this._pins)),
+      serialLines: this.sim ? [...this.sim.serialLines] : [],
+      serialUsed:  this.sim ? this.sim.serialUsed : false,
+      pwmUsed:     this.sim ? this.sim.pwmUsed    : false,
+    };
+  }
+
+  // ── Helpers ───────────────────────────────────────────
   _resetAllPins() {
     this._pins = {};
-    // Reset LED 13
     const led13 = document.getElementById('sim-led-13');
-    if (led13) { led13.className = 'main-led'; led13.textContent = '○'; }
-    // Reset other pins
+    if (led13) { led13.className = 'main-led'; led13.textContent = '○'; led13.style.removeProperty('--pwm-op'); }
     [2,3,4,5,6,7,8,9,10,11,12].forEach(p => {
       const el = document.getElementById(`sim-pin-${p}`);
-      if (el) el.className = 'pin-led';
+      if (el) { el.className = 'pin-led'; el.style.removeProperty('--pwm'); }
     });
   }
 
   _updateStatus(state) {
     const dot = document.getElementById('sim-status-dot');
-    if (!dot) return;
-    dot.className = `sim-status-dot ${state}`;
-  }
-
-  isRunning() { return this._running; }
-
-  // ── Snapshot for challenge validation ─────────────────
-  getState() {
-    return {
-      pins: JSON.parse(JSON.stringify(this._pins)),
-      serialLines: this.sim ? [...this.sim.serialLines] : [],
-      serialUsed: this.sim ? this.sim.serialUsed : false,
-      pwmUsed: this.sim ? this.sim.pwmUsed : false,
-    };
+    if (dot) dot.className = `sim-status-dot ${state}`;
+    const label = document.getElementById('sim-status-label');
+    const map = { running: '● Running', idle: '○ Idle', error: '✕ Error' };
+    if (label) label.textContent = map[state] || '';
   }
 }

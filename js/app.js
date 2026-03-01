@@ -1,29 +1,20 @@
 /* ─────────────────────────────────────────────────────────
    app.js  –  Main application controller for ArduinoLearn.
-              Handles routing, progress, achievements, UI.
    ───────────────────────────────────────────────────────── */
 
 // ── State ──────────────────────────────────────────────────
 const DEFAULT_STATE = {
-  xp: 0,
-  level: 1,
-  completedLessons: [],
-  quizScores: {},
-  achievements: [],
-  challengesPassed: 0,
-  firstTryPasses: 0,
-  serialUsed: false,
-  pwmUsed: false,
+  xp: 0, level: 1,
+  completedLessons: [], quizScores: {}, achievements: [],
+  challengesPassed: 0, firstTryPasses: 0,
+  serialUsed: false, pwmUsed: false,
 };
-
 let STATE = loadState();
-let board = null;      // ArduinoBoard instance
-let editor = null;     // CodeMirror instance
+let board = null;
+let editor = null;
 let currentLesson = null;
-let currentScreen = 'home';
 let challengeAttempts = 0;
 
-// ── Persistence ────────────────────────────────────────────
 function loadState() {
   try {
     const s = localStorage.getItem('arduinolearn_state');
@@ -40,21 +31,17 @@ function addXP(amount) {
   STATE.xp += amount;
   saveState();
   updateXPBar();
+  showXPPop(amount);
   const newLevel = getLevel();
-  if (newLevel.level > oldLevel.level) {
-    showLevelUpToast(newLevel);
-  }
+  if (newLevel.level > oldLevel.level) showLevelUpToast(newLevel);
   checkAchievements();
 }
 
 function getLevel() {
-  let current = LEVELS[0];
-  for (const lvl of LEVELS) {
-    if (STATE.xp >= lvl.xp) current = lvl;
-  }
-  return current;
+  let cur = LEVELS[0];
+  for (const l of LEVELS) { if (STATE.xp >= l.xp) cur = l; }
+  return cur;
 }
-
 function getNextLevel() {
   const idx = LEVELS.findIndex(l => l.level === getLevel().level);
   return LEVELS[idx + 1] || null;
@@ -70,7 +57,7 @@ function updateXPBar() {
   chip.textContent = `Lv ${cur.level}`;
   if (next) {
     const pct = ((STATE.xp - cur.xp) / (next.xp - cur.xp) * 100).toFixed(1);
-    fill.style.width = pct + '%';
+    fill.style.width = Math.min(100, pct) + '%';
     lbl.textContent  = `${STATE.xp} / ${next.xp} XP`;
   } else {
     fill.style.width = '100%';
@@ -78,38 +65,66 @@ function updateXPBar() {
   }
 }
 
+// Floating "+50 XP" pop
+function showXPPop(amount) {
+  const pop = document.createElement('div');
+  pop.className = 'xp-pop';
+  pop.textContent = `+${amount} XP`;
+  document.body.appendChild(pop);
+  // position near xp bar
+  const bar = document.getElementById('xp-fill');
+  if (bar) {
+    const r = bar.getBoundingClientRect();
+    pop.style.left = r.left + 'px';
+    pop.style.top  = (r.top - 10) + 'px';
+  }
+  setTimeout(() => pop.remove(), 1400);
+}
+
 // ── Achievements ────────────────────────────────────────────
 function checkAchievements() {
   ACHIEVEMENTS.forEach(ach => {
     if (STATE.achievements.includes(ach.id)) return;
-    if (ach.cond(STATE)) {
-      STATE.achievements.push(ach.id);
-      saveState();
-      showAchievementToast(ach);
-    }
+    try {
+      if (ach.cond(STATE)) {
+        STATE.achievements.push(ach.id);
+        saveState();
+        showAchievementToast(ach);
+      }
+    } catch(_) {}
   });
 }
 
-// ── Toast / Notifications ───────────────────────────────────
+// ── Toasts ──────────────────────────────────────────────────
+let _toastQueue = [];
+let _toastBusy  = false;
 function showAchievementToast(ach) {
+  _toastQueue.push(ach);
+  if (!_toastBusy) _nextToast();
+}
+function _nextToast() {
+  if (!_toastQueue.length) { _toastBusy = false; return; }
+  _toastBusy = true;
+  const ach   = _toastQueue.shift();
   const toast = document.getElementById('achievement-toast');
   document.getElementById('ach-toast-icon').textContent = ach.icon;
   document.getElementById('ach-toast-name').textContent = ach.name;
   toast.classList.remove('hidden');
-  setTimeout(() => toast.classList.add('hidden'), 4000);
+  setTimeout(() => { toast.classList.add('hidden'); setTimeout(_nextToast, 300); }, 3500);
 }
 
 function showLevelUpToast(lvl) {
   const toast = document.getElementById('levelup-toast');
   document.getElementById('lvl-sub').textContent = `Level ${lvl.level} — ${lvl.title}`;
   toast.classList.remove('hidden');
-  setTimeout(() => toast.classList.add('hidden'), 3500);
+  setTimeout(() => toast.classList.add('hidden'), 3200);
 }
 
 // ── Navigation ──────────────────────────────────────────────
-function navigate(screen, lessonId) {
-  currentScreen = screen;
-  // Update nav active state
+async function navigate(screen, lessonId) {
+  // Stop board if leaving a lesson
+  if (board && board.isRunning()) await board.stop();
+
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   const active = document.querySelector(`.nav-item[data-screen="${screen}"]`);
   if (active) active.classList.add('active');
@@ -125,21 +140,24 @@ function navigate(screen, lessonId) {
     content.innerHTML = renderAchievements();
   } else if (screen === 'projects') {
     content.innerHTML = renderProjects();
+  } else if (screen === 'playground') {
+    renderPlayground();
   }
   window.scrollTo(0, 0);
 }
 
-// ── Sidebar nav population ──────────────────────────────────
+// ── Sidebar ──────────────────────────────────────────────────
 function populateSidebar() {
   ['beginner', 'intermediate', 'advanced'].forEach(diff => {
     const container = document.getElementById(`nav-${diff}`);
     if (!container) return;
+    container.innerHTML = ''; // clear before repopulating
     LESSONS.filter(l => l.difficulty === diff).forEach(lesson => {
       const div = document.createElement('div');
       const done = STATE.completedLessons.includes(lesson.id);
       div.className = 'nav-item';
       div.dataset.lesson = lesson.id;
-      div.innerHTML = `<span>${lesson.icon}</span>${lesson.title}${done ? '<span class="nav-check">✓</span>' : ''}`;
+      div.innerHTML = `<span>${lesson.icon}</span><span class="nav-lesson-title">${lesson.title}</span>${done ? '<span class="nav-check">✓</span>' : ''}`;
       div.addEventListener('click', () => navigate('lesson', lesson.id));
       container.appendChild(div);
     });
@@ -148,23 +166,22 @@ function populateSidebar() {
 
 // ── Home Screen ─────────────────────────────────────────────
 function renderHome() {
-  const total  = LESSONS.length;
-  const done   = STATE.completedLessons.length;
-  const pct    = total > 0 ? Math.round(done / total * 100) : 0;
-  const lvl    = getLevel();
-
-  const nextLesson = LESSONS.find(l => !STATE.completedLessons.includes(l.id)) || LESSONS[0];
-
-  const featuredCards = LESSONS.slice(0, 6).map(l => lessonCard(l)).join('');
+  const total = LESSONS.length;
+  const done  = STATE.completedLessons.length;
+  const pct   = total > 0 ? Math.round(done / total * 100) : 0;
+  const lvl   = getLevel();
+  const next  = LESSONS.find(l => !STATE.completedLessons.includes(l.id)) || LESSONS[0];
 
   return `
   <div class="dash-hero">
     <h1>Welcome to <span>ArduinoLearn</span> ⚡</h1>
-    <p>Learn Arduino coding through interactive lessons, a live simulator, quizzes, and hands-on challenges. From blinking an LED to building real projects!</p>
+    <p>Interactive lessons, a live simulator, quizzes &amp; hands-on challenges.
+       Go from zero to Arduino hero!</p>
     <div class="hero-btns">
-      <button class="btn-primary" onclick="navigate('lesson','${nextLesson.id}')">
+      <button class="btn-primary" onclick="navigate('lesson','${next.id}')">
         ${done === 0 ? '🚀 Start Learning' : '▶ Continue Learning'}
       </button>
+      <button class="btn-secondary" onclick="navigate('playground')">🧪 Free Playground</button>
       <button class="btn-secondary" onclick="navigate('reference')">📚 Reference</button>
     </div>
   </div>
@@ -178,7 +195,7 @@ function renderHome() {
     <div class="stat-card">
       <div class="stat-icon">⭐</div>
       <div class="stat-val">${STATE.xp}</div>
-      <div class="stat-label">Total XP Earned</div>
+      <div class="stat-label">Total XP</div>
     </div>
     <div class="stat-card">
       <div class="stat-icon">⚡</div>
@@ -193,30 +210,17 @@ function renderHome() {
     <div class="stat-card">
       <div class="stat-icon">📈</div>
       <div class="stat-val">${pct}%</div>
-      <div class="stat-label">Course Progress</div>
+      <div class="stat-label">Progress</div>
     </div>
   </div>
 
-  <div class="section-header">
-    <h2>All Lessons</h2>
-  </div>
-
-  <div style="margin-bottom:16px">
-    <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-      <span class="diff-badge beginner">Beginner</span>
-      <span class="diff-badge intermediate">Intermediate</span>
-      <span class="diff-badge advanced">Advanced</span>
-    </div>
-  </div>
-
-  <div class="lesson-grid">
-    ${LESSONS.map(l => lessonCard(l)).join('')}
-  </div>
+  <div class="section-header"><h2>All Lessons</h2></div>
+  <div class="lesson-grid">${LESSONS.map(l => lessonCard(l)).join('')}</div>
   `;
 }
 
 function lessonCard(lesson) {
-  const done = STATE.completedLessons.includes(lesson.id);
+  const done  = STATE.completedLessons.includes(lesson.id);
   const score = STATE.quizScores[lesson.id];
   return `
   <div class="lesson-card ${done ? 'completed' : ''}" onclick="navigate('lesson','${lesson.id}')">
@@ -228,7 +232,6 @@ function lessonCard(lesson) {
       <span class="xp-badge"><span>+${lesson.xp}</span> XP</span>
       ${score !== undefined ? `<span style="color:var(--yellow);font-size:.72rem">Quiz: ${score}%</span>` : ''}
     </div>
-    ${done ? '<div class="card-progress-bar"><div class="card-progress-fill" style="width:100%"></div></div>' : ''}
   </div>`;
 }
 
@@ -238,40 +241,38 @@ function renderLesson(lessonId) {
   if (!currentLesson) return navigate('home');
   challengeAttempts = 0;
 
-  const lessonIdx  = LESSONS.indexOf(currentLesson);
-  const prevLesson = LESSONS[lessonIdx - 1];
-  const nextLesson = LESSONS[lessonIdx + 1];
-  const done = STATE.completedLessons.includes(currentLesson.id);
+  const idx  = LESSONS.indexOf(currentLesson);
+  const prev = LESSONS[idx - 1];
+  const nxt  = LESSONS[idx + 1];
 
-  // Mark nav item active
   document.querySelectorAll('.nav-item[data-lesson]').forEach(el => {
     el.classList.toggle('active', el.dataset.lesson === lessonId);
   });
 
   const content = document.getElementById('content');
   content.innerHTML = `
-  <div class="lesson-view">
+  <div class="lesson-view" id="lesson-view">
 
-    <!-- Header -->
     <div class="lesson-header">
-      <div>
-        <span style="font-size:1.6rem">${currentLesson.icon}</span>
-        <h1 style="display:inline;margin-left:10px">${currentLesson.title}</h1>
-        <span class="diff-badge ${currentLesson.difficulty}" style="margin-left:12px">${currentLesson.difficulty}</span>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:1.5rem">${currentLesson.icon}</span>
+        <h1 style="font-size:1.25rem;font-weight:700">${currentLesson.title}</h1>
+        <span class="diff-badge ${currentLesson.difficulty}">${currentLesson.difficulty}</span>
+        ${STATE.completedLessons.includes(lessonId) ? '<span style="color:var(--green);font-size:.8rem">✓ Completed</span>' : ''}
       </div>
       <div class="lesson-nav-btns">
-        ${prevLesson ? `<button onclick="navigate('lesson','${prevLesson.id}')">← Previous</button>` : ''}
+        ${prev ? `<button onclick="navigate('lesson','${prev.id}')">← Prev</button>` : ''}
         <button onclick="navigate('home')">🏠 Home</button>
-        ${nextLesson ? `<button onclick="navigate('lesson','${nextLesson.id}')">Next →</button>` : ''}
+        ${nxt  ? `<button onclick="navigate('lesson','${nxt.id}')">Next →</button>` : ''}
       </div>
     </div>
 
-    <!-- Left: Theory + Challenge -->
+    <!-- Left panel -->
     <div class="theory-panel">
       <div class="panel-tabs">
-        <div class="panel-tab active" id="tab-theory" onclick="switchTab('theory')">📖 Theory</div>
-        <div class="panel-tab" id="tab-challenge" onclick="switchTab('challenge')">🎯 Challenge</div>
-        <div class="panel-tab" id="tab-quiz" onclick="openQuiz()">❓ Quiz</div>
+        <div class="panel-tab active" id="tab-theory"    onclick="switchTab('theory')">📖 Theory</div>
+        <div class="panel-tab"        id="tab-challenge" onclick="switchTab('challenge')">🎯 Challenge</div>
+        <div class="panel-tab quiz-tab-btn"              onclick="openQuiz()">❓ Quiz</div>
       </div>
       <div class="panel-content" id="panel-content">
         <div id="theory-pane" class="theory-content">${currentLesson.theory}</div>
@@ -279,10 +280,12 @@ function renderLesson(lessonId) {
           <div class="challenge-box">
             <h3>🎯 Your Challenge</h3>
             <p>${currentLesson.challenge.desc}</p>
-            <button class="btn-primary" onclick="checkChallenge()" style="margin-top:8px">✔ Check My Code</button>
-            <div class="challenge-hint">
-              <span class="text-dim">Stuck? </span>
-              <button onclick="showHint()">Show hint</button>
+            <button class="btn-primary" id="check-btn-inner" onclick="checkChallenge()" style="margin-top:10px">
+              ✔ Check My Code
+            </button>
+            <div class="challenge-hint" style="margin-top:10px">
+              <span class="text-dim">Stuck?&nbsp;</span>
+              <button onclick="showHint()" style="color:var(--yellow);text-decoration:underline;font-size:.82rem">Show hint</button>
             </div>
             <div id="hint-box" class="info-box hidden" style="margin-top:10px"></div>
             <div class="challenge-result" id="challenge-result"></div>
@@ -291,122 +294,217 @@ function renderLesson(lessonId) {
       </div>
     </div>
 
-    <!-- Right: Editor + Simulator -->
+    <!-- Right panel -->
     <div class="editor-panel">
       <div class="editor-toolbar">
-        <span class="toolbar-title">sketch.ino</span>
-        <button class="run-btn" id="run-btn" onclick="toggleRun()">▶ Run</button>
-        <button class="check-btn" onclick="checkChallenge()">✔ Check</button>
-        <button class="quiz-btn" onclick="openQuiz()">❓ Quiz</button>
-        <button class="reset-code-btn" onclick="resetCode()">↺ Reset</button>
+        <span class="toolbar-title">sketch.ino&nbsp;<span style="color:var(--text3);font-weight:400;font-size:.72rem">(Ctrl+Enter = Run)</span></span>
+        <button class="run-btn"       id="run-btn"   onclick="toggleRun()">▶ Run</button>
+        <button class="check-btn"                    onclick="checkChallenge()">✔ Check</button>
+        <button class="quiz-btn"                     onclick="openQuiz()">❓ Quiz</button>
+        <button class="reset-code-btn"               onclick="resetCode()">↺ Reset</button>
       </div>
-
       <div class="editor-cm-wrap" id="editor-wrap"></div>
 
-      <!-- Simulator -->
       <div class="sim-panel">
         <div class="sim-header">
           <strong>Simulator</strong>
-          <span style="margin-left:8px;font-size:.7rem;color:var(--text3)">
-            Use sliders for analog inputs
-          </span>
+          <span id="sim-status-label" style="font-size:.7rem;color:var(--text3);margin-left:8px">○ Idle</span>
+          <span style="flex:1"></span>
           <div class="sim-status-dot" id="sim-status-dot"></div>
         </div>
         <div class="sim-body" id="sim-body"></div>
       </div>
     </div>
+  </div>`;
 
-  </div>
-  `;
-
-  // Initialize CodeMirror
+  // Init CodeMirror
   const wrap = document.getElementById('editor-wrap');
-  editor = CodeMirror(wrap, {
-    value: currentLesson.code,
-    mode: 'text/x-c++src',
-    theme: 'dracula',
-    lineNumbers: true,
-    indentWithTabs: false,
-    tabSize: 2,
-    autofocus: true,
-    extraKeys: {
-      'Ctrl-Enter': toggleRun,
-      'Cmd-Enter':  toggleRun,
-    },
-  });
-  editor.setSize('100%', '100%');
+  if (typeof CodeMirror !== 'undefined') {
+    editor = CodeMirror(wrap, {
+      value:        currentLesson.code,
+      mode:         'text/x-c++src',
+      theme:        'dracula',
+      lineNumbers:  true,
+      indentWithTabs: false,
+      tabSize:      2,
+      autofocus:    true,
+      extraKeys: { 'Ctrl-Enter': toggleRun, 'Cmd-Enter': toggleRun },
+    });
+    // Refresh once rendered so height is correct
+    setTimeout(() => { editor.setSize('100%', '100%'); editor.refresh(); }, 60);
+  } else {
+    // Fallback textarea if CDN failed
+    wrap.innerHTML = `<textarea id="editor-fallback"
+      style="width:100%;height:100%;background:#1e1e2e;color:#cdd6f4;font-family:monospace;
+             font-size:13px;padding:12px;border:none;resize:none;outline:none;
+             line-height:1.6;tab-size:2">${currentLesson.code}</textarea>`;
+    editor = {
+      getValue: () => document.getElementById('editor-fallback').value,
+      setValue: (v) => { document.getElementById('editor-fallback').value = v; },
+      setSize:  () => {},
+      refresh:  () => {},
+    };
+  }
 
-  // Initialize board
-  const simBody = document.getElementById('sim-body');
-  board = new ArduinoBoard(simBody);
+  // Init simulator board
+  board = new ArduinoBoard(document.getElementById('sim-body'));
 }
 
 function switchTab(tab) {
-  document.getElementById('tab-theory').classList.toggle('active', tab === 'theory');
-  document.getElementById('tab-challenge').classList.toggle('active', tab === 'challenge');
-  document.getElementById('theory-pane').classList.toggle('hidden', tab !== 'theory');
-  document.getElementById('challenge-pane').classList.toggle('hidden', tab !== 'challenge');
+  document.getElementById('tab-theory')?.classList.toggle('active', tab === 'theory');
+  document.getElementById('tab-challenge')?.classList.toggle('active', tab === 'challenge');
+  document.getElementById('theory-pane')?.classList.toggle('hidden', tab !== 'theory');
+  document.getElementById('challenge-pane')?.classList.toggle('hidden', tab !== 'challenge');
 }
 
 function showHint() {
   const box = document.getElementById('hint-box');
-  box.textContent = '💡 Hint: ' + currentLesson.challenge.hint;
+  if (!box || !currentLesson) return;
+  box.textContent = '💡 ' + currentLesson.challenge.hint;
   box.classList.remove('hidden');
 }
 
-// ── Run / Stop ───────────────────────────────────────────────
+// ── Free Code Playground ─────────────────────────────────────
+function renderPlayground() {
+  currentLesson = null;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('content').innerHTML = `
+  <div class="lesson-view" id="lesson-view">
+    <div class="lesson-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.5rem">🧪</span>
+        <h1 style="font-size:1.25rem;font-weight:700">Free Code Playground</h1>
+        <span style="font-size:.8rem;color:var(--text3)">Write any Arduino code and run it!</span>
+      </div>
+      <div class="lesson-nav-btns"><button onclick="navigate('home')">🏠 Home</button></div>
+    </div>
+    <div class="theory-panel">
+      <div class="panel-tabs"><div class="panel-tab active">📋 Snippets</div></div>
+      <div class="panel-content">
+        <p style="color:var(--text3);font-size:.85rem;margin-bottom:12px">Click a snippet to load it:</p>
+        ${[
+          ['💡 Blink',      'void setup(){pinMode(13,OUTPUT);Serial.begin(9600);}\nvoid loop(){digitalWrite(13,HIGH);Serial.println("ON");delay(500);digitalWrite(13,LOW);Serial.println("OFF");delay(500);}'],
+          ['📡 Serial',     'void setup(){Serial.begin(9600);Serial.println("Hello World!");}\nvoid loop(){Serial.print("Uptime: ");Serial.print(millis()/1000.0,1);Serial.println("s");delay(1000);}'],
+          ['🌈 PWM Fade',   'void setup(){pinMode(9,OUTPUT);}\nvoid loop(){for(int b=0;b<=255;b+=5){analogWrite(9,b);delay(15);}for(int b=255;b>=0;b-=5){analogWrite(9,b);delay(15);}}'],
+          ['🎛️ Analog Read','void setup(){Serial.begin(9600);}\nvoid loop(){int v=analogRead(A0);int p=map(v,0,1023,0,100);Serial.print("A0=");Serial.print(v);Serial.print(" (");Serial.print(p);Serial.println("%)");delay(500);}'],
+          ['⏱️ millis()',   'unsigned long prev=0;\nvoid setup(){Serial.begin(9600);}\nvoid loop(){unsigned long now=millis();if(now-prev>=1000){prev=now;Serial.print("Second: ");Serial.println(now/1000);}}'],
+        ].map(([name, code]) => `
+          <div class="snippet-chip" onclick='loadSnippet(${JSON.stringify(code)})'>${name}</div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="editor-panel">
+      <div class="editor-toolbar">
+        <span class="toolbar-title">playground.ino&nbsp;<span style="color:var(--text3);font-weight:400;font-size:.72rem">(Ctrl+Enter = Run)</span></span>
+        <button class="run-btn" id="run-btn" onclick="toggleRun()">▶ Run</button>
+        <button class="reset-code-btn" onclick="resetPlayground()">↺ Clear</button>
+      </div>
+      <div class="editor-cm-wrap" id="editor-wrap"></div>
+      <div class="sim-panel">
+        <div class="sim-header">
+          <strong>Simulator</strong>
+          <span id="sim-status-label" style="font-size:.7rem;color:var(--text3);margin-left:8px">○ Idle</span>
+          <span style="flex:1"></span>
+          <div class="sim-status-dot" id="sim-status-dot"></div>
+        </div>
+        <div class="sim-body" id="sim-body"></div>
+      </div>
+    </div>
+  </div>`;
+
+  const STARTER = `// Free Playground — write any Arduino sketch!\n\nvoid setup() {\n  Serial.begin(9600);\n  pinMode(13, OUTPUT);\n  Serial.println("Playground ready!");\n}\n\nvoid loop() {\n  digitalWrite(13, HIGH);\n  Serial.println("LED ON");\n  delay(500);\n  digitalWrite(13, LOW);\n  Serial.println("LED OFF");\n  delay(500);\n}`;
+
+  const wrap = document.getElementById('editor-wrap');
+  if (typeof CodeMirror !== 'undefined') {
+    editor = CodeMirror(wrap, {
+      value: STARTER,
+      mode: 'text/x-c++src', theme: 'dracula',
+      lineNumbers: true, indentWithTabs: false, tabSize: 2, autofocus: true,
+      extraKeys: { 'Ctrl-Enter': toggleRun, 'Cmd-Enter': toggleRun },
+    });
+    setTimeout(() => { editor.setSize('100%', '100%'); editor.refresh(); }, 60);
+  } else {
+    wrap.innerHTML = `<textarea id="editor-fallback" style="width:100%;height:100%;background:#1e1e2e;color:#cdd6f4;font-family:monospace;font-size:13px;padding:12px;border:none;resize:none;outline:none;">${STARTER}</textarea>`;
+    editor = {
+      getValue: () => document.getElementById('editor-fallback').value,
+      setValue: (v) => { document.getElementById('editor-fallback').value = v; },
+      setSize: ()=>{}, refresh: ()=>{},
+    };
+  }
+  board = new ArduinoBoard(document.getElementById('sim-body'));
+}
+
+window.loadSnippet = (code) => {
+  if (editor) editor.setValue(code);
+};
+window.resetPlayground = () => {
+  if (editor) editor.setValue('// Your code here\n\nvoid setup() {\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  // ...\n}');
+  if (board) board.stop();
+};
+
+// ── Run / Stop ────────────────────────────────────────────────
 async function toggleRun() {
-  if (!board) return;
+  if (!board || !editor) return;
   const btn = document.getElementById('run-btn');
   if (board.isRunning()) {
+    if (btn) { btn.textContent = '▶ Run'; btn.classList.remove('running'); }
     await board.stop();
-    btn.textContent = '▶ Run';
-    btn.classList.remove('running');
   } else {
     const code = editor.getValue();
-    btn.textContent = '⏹ Stop';
-    btn.classList.add('running');
+    if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('running'); }
     await board.run(code);
-    btn.textContent = '▶ Run';
-    btn.classList.remove('running');
-    // Update state for serial/pwm achievements
+    if (btn) { btn.textContent = '▶ Run'; btn.classList.remove('running'); }
     if (board.sim) {
       if (board.sim.serialUsed) { STATE.serialUsed = true; saveState(); checkAchievements(); }
-      if (board.sim.pwmUsed)   { STATE.pwmUsed = true; saveState(); checkAchievements(); }
+      if (board.sim.pwmUsed)    { STATE.pwmUsed    = true; saveState(); checkAchievements(); }
     }
   }
 }
 
 function resetCode() {
   if (!currentLesson || !editor) return;
-  editor.setValue(currentLesson.code);
   if (board) board.stop();
+  editor.setValue(currentLesson.code);
+  const res = document.getElementById('challenge-result');
+  if (res) { res.className = 'challenge-result'; res.innerHTML = ''; }
 }
 
 // ── Challenge checking ────────────────────────────────────────
 async function checkChallenge() {
-  if (!currentLesson || !editor) return;
+  if (!currentLesson || !editor || !board) return;
   switchTab('challenge');
 
-  const code = editor.getValue();
   const resultEl = document.getElementById('challenge-result');
+  const btnEl    = document.getElementById('check-btn-inner');
   if (!resultEl) return;
 
-  // Run the code briefly to get state
-  if (!board.isRunning()) {
-    await board.run(code);
-    await board.stop();
+  // Show checking state
+  resultEl.className = 'challenge-result';
+  resultEl.innerHTML = '<span style="color:var(--text3)">⏳ Checking…</span>';
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Checking…'; }
+
+  const code = editor.getValue();
+
+  // Stop any running sketch, then do a fast validation run
+  if (board.isRunning()) await board.stop();
+  await board.runForCheck(code);
+
+  // Re-enable button
+  if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✔ Check My Code'; }
+
+  const state = board.getState();
+  let passed = false;
+  try {
+    passed = currentLesson.challenge.validate(code, state);
+  } catch(e) {
+    passed = false;
   }
 
-  const simState = board.getState();
-  simState.serialLines = board.sim ? board.sim.serialLines : [];
-
-  const passed = currentLesson.challenge.validate(code, simState);
   challengeAttempts++;
-
   resultEl.className = 'challenge-result ' + (passed ? 'pass' : 'fail');
+
   if (passed) {
-    resultEl.innerHTML = '🎉 Challenge Complete! Great work!';
+    resultEl.innerHTML = '🎉 Challenge complete! Great work!';
     if (!STATE.completedLessons.includes(currentLesson.id)) {
       STATE.completedLessons.push(currentLesson.id);
       STATE.challengesPassed++;
@@ -416,8 +514,9 @@ async function checkChallenge() {
     }
     saveState();
     checkAchievements();
+    launchConfetti();
   } else {
-    resultEl.innerHTML = '❌ Not quite right yet. Check the hint for guidance!';
+    resultEl.innerHTML = '❌ Not quite — check the hint below for guidance!';
   }
 }
 
@@ -434,51 +533,66 @@ function updateSidebarChecks() {
   });
 }
 
+// Minimal confetti burst
+function launchConfetti() {
+  const colors = ['#58a6ff','#3fb950','#ffd700','#bc8cff','#f0883e'];
+  for (let i = 0; i < 40; i++) {
+    const d = document.createElement('div');
+    d.className = 'confetti-bit';
+    d.style.cssText = `left:${Math.random()*100}vw;background:${colors[i%colors.length]};
+      animation-duration:${0.8+Math.random()*0.8}s;animation-delay:${Math.random()*0.3}s;
+      width:${6+Math.random()*6}px;height:${6+Math.random()*6}px;border-radius:${Math.random()>0.5?'50%':'2px'}`;
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 1800);
+  }
+}
+
 // ── Quiz ───────────────────────────────────────────────────────
 function openQuiz() {
   if (!currentLesson) return;
   const questions = currentLesson.quiz;
-  if (!questions || !questions.length) {
-    showModal('No Quiz', '<p>No quiz available for this lesson yet.</p>', '');
+  if (!questions?.length) {
+    showModal('No Quiz', '<p>No quiz available for this lesson yet.</p>', '<button class="btn-secondary" onclick="closeModal()">Close</button>');
     return;
   }
 
-  let qIndex = 0;
-  let score  = 0;
-  const answers = [];
+  let qIdx = 0, score = 0;
 
   function renderQ() {
-    const q = questions[qIndex];
-    const letters = ['A', 'B', 'C', 'D'];
-    const body = `
+    const q = questions[qIdx];
+    const letters = ['A','B','C','D'];
+    document.getElementById('modal-body').innerHTML = `
       <div class="quiz-progress">
-        ${questions.map((_, i) => `
-          <div class="quiz-dot ${i < qIndex ? 'done' : i === qIndex ? 'current' : ''}"></div>
-        `).join('')}
+        ${questions.map((_,i) => `<div class="quiz-dot ${i<qIdx?'done':i===qIdx?'current':''}"></div>`).join('')}
+      </div>
+      <div style="font-size:.75rem;color:var(--text3);margin-bottom:10px">
+        Question ${qIdx+1} of ${questions.length}
       </div>
       <div class="quiz-q">${q.q}</div>
       <div class="quiz-opts" id="quiz-opts">
-        ${q.opts.map((opt, i) => `
-          <div class="quiz-opt" onclick="selectAnswer(${i})">
+        ${q.opts.map((opt,i) => `
+          <div class="quiz-opt" data-idx="${i}">
             <div class="quiz-opt-letter">${letters[i]}</div>
             <span>${opt}</span>
-          </div>
-        `).join('')}
+          </div>`).join('')}
       </div>
       <div id="quiz-explain" class="quiz-explanation hidden"></div>
     `;
-    document.getElementById('modal-body').innerHTML = body;
     document.getElementById('modal-foot').innerHTML = '';
-    window.selectAnswer = (idx) => selectAnswer(q, idx);
+
+    // Attach listeners (no global scope pollution)
+    document.querySelectorAll('.quiz-opt').forEach(el => {
+      el.addEventListener('click', () => handleAnswer(q, parseInt(el.dataset.idx)));
+    });
   }
 
-  function selectAnswer(q, chosen) {
-    const opts  = document.querySelectorAll('.quiz-opt');
+  function handleAnswer(q, chosen) {
+    const opts    = document.querySelectorAll('.quiz-opt');
     const explain = document.getElementById('quiz-explain');
     opts.forEach((el, i) => {
       el.classList.add('disabled');
       if (i === q.correct) el.classList.add('correct');
-      else if (i === chosen && i !== q.correct) el.classList.add('wrong');
+      else if (i === chosen) el.classList.add('wrong');
     });
     if (chosen === q.correct) {
       score++;
@@ -487,34 +601,23 @@ function openQuiz() {
       explain.textContent = '❌ ' + q.explain;
     }
     explain.classList.remove('hidden');
-    answers.push(chosen);
 
+    const isLast = qIdx >= questions.length - 1;
     document.getElementById('modal-foot').innerHTML = `
-      <button class="btn-primary" onclick="nextQ()">
-        ${qIndex < questions.length - 1 ? 'Next Question →' : 'See Results'}
-      </button>
+      <button class="btn-primary" id="quiz-next-btn">${isLast ? '🏁 See Results' : 'Next →'}</button>
     `;
-    window.nextQ = nextQ;
-  }
-
-  function nextQ() {
-    qIndex++;
-    if (qIndex < questions.length) {
-      renderQ();
-    } else {
-      showResults();
-    }
+    document.getElementById('quiz-next-btn').addEventListener('click', () => {
+      qIdx++;
+      if (qIdx < questions.length) renderQ();
+      else showResults();
+    });
   }
 
   function showResults() {
-    const pct = Math.round(score / questions.length * 100);
-    const msgs = ['Keep studying! 💪', 'Good effort! 📚', 'Nice work! 👍', 'Excellent! 🌟', 'Perfect score! 🏆'];
-    const msgIdx = Math.floor(pct / 25);
-
-    // Award XP for quiz
+    const pct   = Math.round(score / questions.length * 100);
+    const msgs  = ['Keep studying! 💪','Getting there! 📚','Good work! 👍','Excellent! 🌟','Perfect! 🏆'];
     const xpEarned = Math.round(currentLesson.xp * 0.5 * (pct / 100));
 
-    // Save score
     const prev = STATE.quizScores[currentLesson.id];
     if (prev === undefined || pct > prev) {
       STATE.quizScores[currentLesson.id] = pct;
@@ -523,75 +626,77 @@ function openQuiz() {
     if (xpEarned > 0) addXP(xpEarned);
     checkAchievements();
 
+    const emoji = pct === 100 ? '🏆' : pct >= 67 ? '🌟' : pct >= 33 ? '👍' : '💪';
     document.getElementById('modal-body').innerHTML = `
       <div class="quiz-score-wrap">
+        <div style="font-size:3rem">${emoji}</div>
         <div class="quiz-score-num">${score}/${questions.length}</div>
         <div class="quiz-score-sub">${pct}% Correct</div>
-        <div class="quiz-score-msg">${msgs[Math.min(msgIdx, 4)]}</div>
-        ${xpEarned > 0 ? `<div style="margin-top:12px;color:var(--yellow)">+${xpEarned} XP earned!</div>` : ''}
-      </div>
-    `;
+        <div class="quiz-score-msg">${msgs[Math.min(Math.floor(pct/25), 4)]}</div>
+        ${xpEarned>0 ? `<div style="margin-top:14px;color:var(--yellow);font-weight:600">+${xpEarned} XP earned!</div>` : ''}
+      </div>`;
     document.getElementById('modal-foot').innerHTML = `
       <button class="btn-secondary" onclick="closeModal()">Close</button>
       <button class="btn-primary" onclick="closeModal()">Back to Lesson</button>
     `;
+    if (pct === 100) launchConfetti();
   }
 
-  showModal(`Quiz — ${currentLesson.title}`, '', '');
+  showModal(`❓ Quiz — ${currentLesson.title}`, '', '');
   renderQ();
 }
 
-// ── Reference Screen ─────────────────────────────────────────
+// ── Reference ─────────────────────────────────────────────────
 function renderReference() {
+  const colorMap = { blue:'var(--blue)', green:'var(--green)', orange:'var(--orange)',
+                     purple:'var(--purple)', teal:'var(--teal)', yellow:'var(--yellow)' };
   return `
   <div class="page-header">
-    <h1>📚 Arduino Reference</h1>
-    <p>Quick reference for all important Arduino functions and data types.</p>
+    <h1>📚 Arduino Quick Reference</h1>
+    <p>All the essential functions and data types at a glance.</p>
   </div>
   <div class="ref-grid">
     ${REFERENCE.map(cat => `
       <div class="ref-card">
-        <h3 style="color:var(--${cat.color}, var(--blue))">${cat.title}</h3>
+        <h3 style="color:${colorMap[cat.color]||'var(--blue)'}">${cat.title}</h3>
         ${cat.entries.map(e => `
           <div class="ref-entry">
             <div class="ref-sig">${e.sig}</div>
             <div class="ref-desc">${e.desc}</div>
-          </div>
-        `).join('')}
-      </div>
-    `).join('')}
-  </div>
-  `;
+          </div>`).join('')}
+      </div>`).join('')}
+  </div>`;
 }
 
-// ── Achievements Screen ──────────────────────────────────────
+// ── Achievements ─────────────────────────────────────────────
 function renderAchievements() {
+  const earned = STATE.achievements.length;
   return `
   <div class="page-header">
     <h1>🏆 Achievements</h1>
-    <p>${STATE.achievements.length} of ${ACHIEVEMENTS.length} unlocked</p>
+    <p>${earned} of ${ACHIEVEMENTS.length} unlocked</p>
   </div>
   <div class="ach-grid">
     ${ACHIEVEMENTS.map(ach => {
-      const earned = STATE.achievements.includes(ach.id);
-      return `
-      <div class="ach-card ${earned ? 'earned' : ''}">
+      const e = STATE.achievements.includes(ach.id);
+      return `<div class="ach-card ${e?'earned':''}">
         <div class="ach-icon">${ach.icon}</div>
         <div class="ach-name">${ach.name}</div>
         <div class="ach-desc">${ach.desc}</div>
-        ${earned ? '<div class="ach-earned-label">✓ Unlocked</div>' : '<div class="ach-earned-label" style="color:var(--text3)">Locked 🔒</div>'}
+        <div class="ach-earned-label" style="color:${e?'var(--yellow)':'var(--text3)'}">
+          ${e ? '✓ Unlocked' : '🔒 Locked'}
+        </div>
       </div>`;
     }).join('')}
-  </div>
-  `;
+  </div>`;
 }
 
-// ── Projects Screen ───────────────────────────────────────────
+// ── Projects ──────────────────────────────────────────────────
 function renderProjects() {
   return `
   <div class="page-header">
     <h1>🔧 Project Gallery</h1>
-    <p>Real-world projects to build once you've completed the lessons!</p>
+    <p>Real-world projects to build once you've mastered the lessons!</p>
   </div>
   <div class="project-grid">
     ${PROJECTS.map(p => `
@@ -599,86 +704,61 @@ function renderProjects() {
         <div class="project-icon">${p.icon}</div>
         <div class="project-title">${p.title}</div>
         <div class="project-desc">${p.desc}</div>
-        <div class="project-parts">
-          ${p.parts.map(part => `<span class="part-chip">${part}</span>`).join('')}
-        </div>
+        <div class="project-parts">${p.parts.map(pt => `<span class="part-chip">${pt}</span>`).join('')}</div>
         <div class="project-diff">
           <span class="diff-badge ${p.difficulty}">${p.difficulty}</span>
           <span style="font-size:.75rem;color:var(--text3);margin-left:8px">
             Skills: ${p.skills.join(', ')}
           </span>
         </div>
-      </div>
-    `).join('')}
-  </div>
-  `;
+      </div>`).join('')}
+  </div>`;
 }
 
 // ── Modal ──────────────────────────────────────────────────────
 function showModal(title, body, foot) {
   document.getElementById('modal-title').textContent = title;
-  document.getElementById('modal-body').innerHTML = body;
-  document.getElementById('modal-foot').innerHTML = foot;
+  document.getElementById('modal-body').innerHTML    = body;
+  document.getElementById('modal-foot').innerHTML   = foot;
   document.getElementById('modal-bg').classList.remove('hidden');
 }
 function closeModal() {
   document.getElementById('modal-bg').classList.add('hidden');
 }
 
-// ── Reset progress ─────────────────────────────────────────────
+// ── Reset ─────────────────────────────────────────────────────
 function confirmReset() {
-  showModal(
-    'Reset Progress',
-    `<p>Are you sure you want to <strong style="color:var(--red)">reset all progress</strong>? This will clear your XP, completed lessons, and achievements. This cannot be undone.</p>`,
+  showModal('Reset Progress',
+    `<p>Reset <strong style="color:var(--red)">all progress</strong>?
+     This clears XP, completed lessons, and achievements. This cannot be undone.</p>`,
     `<button class="btn-secondary" onclick="closeModal()">Cancel</button>
-     <button class="btn-danger" onclick="doReset()">Reset Everything</button>`
-  );
-  window.doReset = () => {
-    STATE = { ...DEFAULT_STATE };
-    saveState();
-    closeModal();
-    populateSidebar();
-    navigate('home');
-    updateXPBar();
-  };
+     <button class="btn-danger" onclick="doReset()">Reset Everything</button>`);
+}
+function doReset() {
+  STATE = { ...DEFAULT_STATE };
+  saveState();
+  closeModal();
+  // Clear nav groups so populateSidebar doesn't double-add
+  ['beginner','intermediate','advanced'].forEach(d => {
+    const c = document.getElementById(`nav-${d}`);
+    if (c) c.innerHTML = '';
+  });
+  populateSidebar();
+  updateXPBar();
+  navigate('home');
 }
 
-// ── Sidebar toggle ─────────────────────────────────────────────
+// ── Sidebar toggle ────────────────────────────────────────────
 function toggleSidebar() {
-  const sidebar  = document.getElementById('sidebar');
-  const content  = document.getElementById('content');
-  sidebar.classList.toggle('collapsed');
-  content.classList.toggle('full');
+  const sidebar = document.getElementById('sidebar');
+  const content = document.getElementById('content');
+  const collapsed = sidebar.classList.toggle('collapsed');
+  content.classList.toggle('full', collapsed);
 }
 
-// ── Event listeners & bootstrap ────────────────────────────────
+// ── Bootstrap ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Sidebar toggle
-  document.getElementById('ham-btn').addEventListener('click', toggleSidebar);
-
-  // Modal close
-  document.getElementById('modal-close').addEventListener('click', closeModal);
-  document.getElementById('modal-bg').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeModal();
-  });
-
-  // Home nav link
-  document.querySelector('.nav-home').addEventListener('click', () => navigate('home'));
-
-  // Other nav items (reference, achievements, projects)
-  document.querySelectorAll('.nav-item[data-screen]').forEach(el => {
-    el.addEventListener('click', () => navigate(el.dataset.screen));
-  });
-
-  // Reset button
-  document.getElementById('reset-btn').addEventListener('click', confirmReset);
-
-  // Achievements icon in header
-  document.querySelectorAll('[data-screen="achievements"]').forEach(el => {
-    el.addEventListener('click', () => navigate('achievements'));
-  });
-
-  // Expose globals needed by inline handlers
+  // Expose globals needed by inline onclick handlers
   window.navigate       = navigate;
   window.toggleRun      = toggleRun;
   window.resetCode      = resetCode;
@@ -688,20 +768,25 @@ document.addEventListener('DOMContentLoaded', () => {
   window.showHint       = showHint;
   window.closeModal     = closeModal;
   window.confirmReset   = confirmReset;
+  window.doReset        = doReset;
 
-  // Init sidebar
+  document.getElementById('ham-btn').addEventListener('click', toggleSidebar);
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-bg').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  document.getElementById('reset-btn').addEventListener('click', confirmReset);
+
+  // Static nav items (home, ref, ach, projects, playground)
+  document.querySelectorAll('.nav-item[data-screen]').forEach(el => {
+    el.addEventListener('click', () => navigate(el.dataset.screen));
+  });
+
   populateSidebar();
-
-  // Init XP bar
   updateXPBar();
-
-  // Check achievements for existing progress
   checkAchievements();
-
-  // Navigate to home
   navigate('home');
 
-  // Responsive sidebar: collapse on small screens by default
   if (window.innerWidth < 900) {
     document.getElementById('sidebar').classList.add('collapsed');
     document.getElementById('content').classList.add('full');

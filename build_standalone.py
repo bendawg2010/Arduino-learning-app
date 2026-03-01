@@ -1,4 +1,13 @@
-<!DOCTYPE html>
+#!/usr/bin/env python3
+"""Combine all app files into one standalone HTML."""
+import re
+
+with open('css/style.css')    as f: css  = f.read()
+with open('js/data.js')        as f: data = f.read()
+with open('js/simulator.js')   as f: sim  = f.read()
+with open('js/app.js')         as f: app  = f.read()
+
+html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -8,11 +17,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css" />
-  <link rel="stylesheet" href="css/style.css" />
+  <style>
+{css}
+  </style>
 </head>
 <body>
 
-  <!-- Achievement toast -->
   <div id="achievement-toast" class="achievement-toast hidden">
     <div class="ach-toast-icon" id="ach-toast-icon">🏆</div>
     <div class="ach-toast-body">
@@ -21,17 +31,15 @@
     </div>
   </div>
 
-  <!-- Level-up toast -->
   <div id="levelup-toast" class="levelup-toast hidden">
     <div class="lvl-bolt">⚡</div>
     <div>
       <div class="lvl-title">LEVEL UP!</div>
-      <div class="lvl-sub" id="lvl-sub">Level 2 Arduino Tinkerer</div>
+      <div class="lvl-sub" id="lvl-sub">Level 2</div>
     </div>
   </div>
 
   <div id="app">
-    <!-- ── Header ────────────────────────────────────── -->
     <header class="header">
       <div class="header-left">
         <button class="ham-btn" id="ham-btn" aria-label="Toggle menu">
@@ -42,17 +50,13 @@
           <span class="logo-text">Arduino<strong>Learn</strong></span>
         </div>
       </div>
-
       <div class="header-center">
         <div class="xp-wrap">
           <div class="level-chip" id="level-chip">Lv 1</div>
-          <div class="xp-track">
-            <div class="xp-fill" id="xp-fill" style="width:0%"></div>
-          </div>
+          <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
           <div class="xp-label" id="xp-label">0 / 100 XP</div>
         </div>
       </div>
-
       <div class="header-right">
         <button class="icon-btn" data-screen="achievements" title="Achievements">🏆</button>
         <button class="icon-btn" id="reset-btn" title="Reset Progress">↺</button>
@@ -60,43 +64,24 @@
     </header>
 
     <div class="layout">
-      <!-- ── Sidebar ──────────────────────────────────── -->
       <nav class="sidebar" id="sidebar">
-        <div class="nav-item nav-home active" data-screen="home">
-          <span>🏠</span> Dashboard
-        </div>
-
+        <div class="nav-item nav-home" data-screen="home"><span>🏠</span> Dashboard</div>
         <div class="nav-group-label">Beginner</div>
         <div id="nav-beginner" class="nav-group"></div>
-
         <div class="nav-group-label">Intermediate</div>
         <div id="nav-intermediate" class="nav-group"></div>
-
         <div class="nav-group-label">Advanced</div>
         <div id="nav-advanced" class="nav-group"></div>
-
         <div class="nav-divider"></div>
-
-        <div class="nav-item" data-screen="playground">
-          <span>🧪</span> Playground
-        </div>
-        <div class="nav-item" data-screen="projects">
-          <span>🔧</span> Projects
-        </div>
-        <div class="nav-item" data-screen="reference">
-          <span>📚</span> Reference
-        </div>
-        <div class="nav-item" data-screen="achievements">
-          <span>🏆</span> Achievements
-        </div>
+        <div class="nav-item" data-screen="playground"><span>🧪</span> Playground</div>
+        <div class="nav-item" data-screen="projects"><span>🔧</span> Projects</div>
+        <div class="nav-item" data-screen="reference"><span>📚</span> Reference</div>
+        <div class="nav-item" data-screen="achievements"><span>🏆</span> Achievements</div>
       </nav>
-
-      <!-- ── Main content ─────────────────────────────── -->
       <main class="content" id="content"></main>
     </div>
   </div>
 
-  <!-- ── Modal ──────────────────────────────────────── -->
   <div id="modal-bg" class="modal-bg hidden">
     <div class="modal" id="modal">
       <div class="modal-head">
@@ -108,11 +93,24 @@
     </div>
   </div>
 
-  <!-- ── Scripts ────────────────────────────────────── -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/simulator.js"></script>
-  <script src="js/app.js"></script>
+  <script>
+/* ── data.js ─────────────────────────────────────────── */
+{data}
+  </script>
+  <script>
+/* ── simulator.js ───────────────────────────────────── */
+{sim}
+  </script>
+  <script>
+/* ── app.js ─────────────────────────────────────────── */
+{app}
+  </script>
 </body>
-</html>
+</html>"""
+
+with open('standalone.html', 'w') as f:
+    f.write(html)
+
+print(f"standalone.html written — {len(html):,} chars")

@@ -785,6 +785,52 @@ input, textarea { font-family: inherit; }
   border-radius: 2px; transition: width .4s;
 }
 
+/* ─── Floating XP pop ───────────────────────────────────── */
+.xp-pop {
+  position: fixed; z-index: 600; pointer-events: none;
+  color: var(--yellow); font-weight: 700; font-size: 1rem;
+  animation: xp-float 1.4s ease forwards;
+  text-shadow: 0 0 8px rgba(210,153,34,.6);
+}
+@keyframes xp-float {
+  0%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-50px); }
+}
+
+/* ─── Confetti ───────────────────────────────────────────── */
+.confetti-bit {
+  position: fixed; top: -10px; z-index: 700; pointer-events: none;
+  animation: confetti-fall linear forwards;
+}
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+/* ─── Snippet chips (playground) ────────────────────────── */
+.snippet-chip {
+  display: inline-block; margin: 4px 4px 4px 0;
+  background: var(--surface3); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 6px 12px;
+  font-size: .82rem; cursor: pointer; color: var(--text2);
+  transition: background .15s, border-color .15s;
+}
+.snippet-chip:hover { background: var(--surface2); border-color: var(--blue); color: var(--text); }
+
+/* ─── Nav lesson title truncation ───────────────────────── */
+.nav-item { position: relative; }
+.nav-lesson-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+
+/* ─── Quiz tab button style ─────────────────────────────── */
+.quiz-tab-btn { cursor: pointer; }
+
+/* ─── Lesson view fills screen ──────────────────────────── */
+.lesson-view {
+  height: calc(100vh - 56px - 56px);
+  min-height: 600px;
+  overflow: hidden;
+}
+
 /* ─── Responsive ─────────────────────────────────────── */
 @media (max-width: 900px) {
   .sidebar { transform: translateX(-220px); }
