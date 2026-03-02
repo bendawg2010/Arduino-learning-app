@@ -510,6 +510,30 @@ input, textarea { font-family: inherit; }
 .pin-led.pwm  { background: rgba(63,185,80, var(--pwm, 0)); box-shadow: none; }
 .pin-num { font-size: .5rem; font-family: var(--font-mono); color: #3a6a3a; }
 
+/* Interactive digital-input buttons */
+.btn-input-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-input-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.sim-pushbtn {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #1a3a1a; border: 2px solid #3a6a3a;
+  color: #4a9a4a; font-size: .6rem; font-family: var(--font-mono);
+  cursor: pointer; user-select: none;
+  display: grid; place-items: center;
+  transition: background .08s, box-shadow .08s, border-color .08s;
+}
+.sim-pushbtn:hover { border-color: #5aaa5a; color: #6aba6a; }
+.sim-pushbtn.pressed {
+  background: #2a7a2a;
+  border-color: #3fb950;
+  box-shadow: 0 0 10px #3fb950, 0 0 20px rgba(63,185,80,.4);
+  color: #fff;
+}
+.btn-pin-label {
+  font-size: .55rem; font-family: var(--font-mono);
+  color: #4a7a4a; text-align: center; line-height: 1.3;
+}
+.btn-state-lbl { color: #3fb950; }
+
 /* Main LED */
 .main-led-wrap { text-align: center; }
 .main-led {

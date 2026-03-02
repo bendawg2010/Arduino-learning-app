@@ -121,9 +121,9 @@ class SimObject {
   constructor(board, fastMode = false) {
     this._board   = board;
     this.running  = false;
-    this.fastMode = fastMode;           // fast = no real delays (for challenge check)
+    this.fastMode = fastMode;            // fast = no real delays (for challenge check)
     this._startMs = Date.now();
-    this._maxLoops = fastMode ? 40 : 8; // 8 visual loops, 40 fast validation loops
+    this._maxLoops = fastMode ? 60 : 16; // 16 visual loops, 60 fast validation loops
     this._loopCount = 0;
     this.serialLines  = [];
     this.serialUsed   = false;
@@ -153,7 +153,7 @@ class SimObject {
     return 0;
   }
   async digitalRead(pin) {
-    return this._board.getDigital(pin);
+    return this._board.getDigitalInput(pin);
   }
 
   // ── Timing ───────────────────────────────────────────
@@ -163,7 +163,7 @@ class SimObject {
       // yield to event loop but don't wait
       await new Promise(r => setTimeout(r, 1));
     } else {
-      ms = Math.min(+ms || 0, 600); // cap real delays at 600ms
+      ms = Math.min(+ms || 0, 1500); // cap real delays at 1500ms so large delays are visible
       await new Promise(r => setTimeout(r, ms));
     }
     if (!this.running) throw new Error('STOPPED');
@@ -212,12 +212,13 @@ class SimObject {
 // ── ArduinoBoard — visual board + runner ──────────────────
 class ArduinoBoard {
   constructor(containerEl) {
-    this._el      = containerEl;
-    this._pins    = {};
-    this._analog  = [512, 512, 512, 512, 512, 512];
+    this._el        = containerEl;
+    this._pins      = {};
+    this._analog    = [512, 512, 512, 512, 512, 512];
     this._serialBuf = '';
-    this.sim      = null;
-    this._running = false;
+    this._btnState  = {}; // pin → 0 (released) or 1 (pressed)
+    this.sim        = null;
+    this._running   = false;
     this._render();
   }
 
@@ -236,11 +237,16 @@ class ArduinoBoard {
           <div class="pin-row-label">Digital Pins</div>
           <div class="pin-row" id="sim-pin-row">
             ${[2,3,4,5,6,7,8,9,10,11,12].map(p => `
-              <div class="pin-item" title="Pin ${p}${[3,5,6,9,10,11].includes(p) ? ' (PWM~)' : ''}">
+              <div class="pin-item" id="sim-pin-item-${p}" title="Pin ${p}${[3,5,6,9,10,11].includes(p) ? ' (PWM~)' : ''}">
                 <div class="pin-led" id="sim-pin-${p}"></div>
                 <div class="pin-num">${p}${[3,5,6,9,10,11].includes(p) ? '~' : ''}</div>
               </div>`).join('')}
           </div>
+        </div>
+
+        <div id="sim-btn-row-wrap" style="display:none">
+          <div class="pin-row-label">Digital Inputs — hold button to press</div>
+          <div class="btn-input-row" id="sim-btn-row"></div>
         </div>
 
         <div>
@@ -274,10 +280,61 @@ class ArduinoBoard {
     window._board = this;
   }
 
+  // ── Interactive button helpers ────────────────────────
+  _showButtonForPin(pin) {
+    const wrap = document.getElementById('sim-btn-row-wrap');
+    const row  = document.getElementById('sim-btn-row');
+    if (!wrap || !row) return;
+    // Only add if not already present
+    if (document.getElementById(`sim-btn-${pin}`)) return;
+
+    const isPullup = this._pins[pin] && this._pins[pin].mode === '"INPUT_PULLUP"';
+    const div = document.createElement('div');
+    div.className = 'btn-input-item';
+    div.id = `sim-btn-${pin}`;
+    div.innerHTML = `
+      <button class="sim-pushbtn" id="sim-pushbtn-${pin}"
+        onmousedown="window._board&&window._board.pressBtn(${pin},true)"
+        onmouseup="window._board&&window._board.pressBtn(${pin},false)"
+        ontouchstart="window._board&&window._board.pressBtn(${pin},true);event.preventDefault()"
+        ontouchend="window._board&&window._board.pressBtn(${pin},false)">
+        Hold
+      </button>
+      <div class="btn-pin-label">Pin ${pin}<br><span id="sim-btn-state-${pin}" class="btn-state-lbl">${isPullup ? 'HIGH' : 'LOW'}</span></div>
+    `;
+    row.appendChild(div);
+    wrap.style.display = '';
+    // init state: INPUT_PULLUP → reads HIGH (1) by default; INPUT → LOW (0)
+    this._btnState[pin] = isPullup ? 1 : 0;
+  }
+
+  pressBtn(pin, down) {
+    const isPullup = this._pins[pin] && this._pins[pin].mode === '"INPUT_PULLUP"';
+    // With INPUT_PULLUP: pressing connects to GND → reads LOW (0)
+    // With INPUT: pressing sends 5V → reads HIGH (1)
+    this._btnState[pin] = isPullup ? (down ? 0 : 1) : (down ? 1 : 0);
+    const lbl = document.getElementById(`sim-btn-state-${pin}`);
+    if (lbl) lbl.textContent = this._btnState[pin] ? 'HIGH' : 'LOW';
+    const btn = document.getElementById(`sim-pushbtn-${pin}`);
+    if (btn) btn.classList.toggle('pressed', down);
+  }
+
+  _clearButtons() {
+    this._btnState = {};
+    const wrap = document.getElementById('sim-btn-row-wrap');
+    const row  = document.getElementById('sim-btn-row');
+    if (wrap) wrap.style.display = 'none';
+    if (row)  row.innerHTML = '';
+  }
+
   // ── Pin state ─────────────────────────────────────────
   setPinMode(pin, mode) {
     this._pins[pin] = this._pins[pin] || {};
     this._pins[pin].mode = mode;
+    // If this is an INPUT pin, show an interactive button
+    if (mode === '"INPUT"' || mode === '"INPUT_PULLUP"') {
+      this._showButtonForPin(pin);
+    }
   }
   setDigital(pin, val) {
     this._pins[pin] = this._pins[pin] || {};
@@ -291,7 +348,14 @@ class ArduinoBoard {
     this._pins[pin].pwm = val;
     this._updatePinEl(pin, null, val);
   }
-  getDigital(pin)  { return (this._pins[pin] && this._pins[pin].digital) ? 1 : 0; }
+  getDigital(pin)       { return (this._pins[pin] && this._pins[pin].digital) ? 1 : 0; }
+  getDigitalInput(pin)  {
+    // If the pin has an interactive button state, use it
+    if (pin in this._btnState) return this._btnState[pin];
+    // Default: INPUT_PULLUP pins read HIGH, INPUT pins read LOW
+    const mode = this._pins[pin] && this._pins[pin].mode;
+    return mode === '"INPUT_PULLUP"' ? 1 : 0;
+  }
   getAnalog(idx)   { return this._analog[idx] || 0; }
 
   setAnalogSlider(idx, val) {
@@ -456,6 +520,7 @@ class ArduinoBoard {
   // ── Helpers ───────────────────────────────────────────
   _resetAllPins() {
     this._pins = {};
+    this._clearButtons();
     const led13 = document.getElementById('sim-led-13');
     if (led13) { led13.className = 'main-led'; led13.textContent = '○'; led13.style.removeProperty('--pwm-op'); }
     [2,3,4,5,6,7,8,9,10,11,12].forEach(p => {

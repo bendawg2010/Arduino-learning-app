@@ -23,7 +23,7 @@ const ACHIEVEMENTS = [
   { id: 'blink_master',    icon: '💡', name: 'Blink Master',    desc: 'Complete the Blink lesson.',                        cond: s => s.completedLessons.includes('blink')  },
   { id: 'quiz_ace',        icon: '🎯', name: 'Quiz Ace',        desc: 'Answer a quiz question correctly.',                 cond: s => Object.values(s.quizScores).some(v => v >= 100)  },
   { id: 'five_lessons',    icon: '🔥', name: 'On Fire',         desc: 'Complete 5 lessons.',                               cond: s => s.completedLessons.length >= 5  },
-  { id: 'all_lessons',     icon: '🎓', name: 'Graduate',        desc: 'Complete all 12 lessons.',                          cond: s => s.completedLessons.length >= 12 },
+  { id: 'all_lessons',     icon: '🎓', name: 'Graduate',        desc: 'Complete all 16 lessons.',                          cond: s => s.completedLessons.length >= 16 },
   { id: 'serial_user',     icon: '📡', name: 'Talker',          desc: 'Use Serial.println() in your code.',                cond: s => s.serialUsed  },
   { id: 'pwm_user',        icon: '🌈', name: 'Fader',           desc: 'Use analogWrite() for PWM.',                        cond: s => s.pwmUsed     },
   { id: 'first_challenge', icon: '💪', name: 'Challenger',      desc: 'Pass your first challenge.',                        cond: s => s.challengesPassed >= 1  },
@@ -376,39 +376,99 @@ void loop() {
   // ── 4. Digital Input ─────────────────────────────────────
   {
     id: 'digital-input', title: 'Buttons & Digital Input', icon: '🔘',
-    difficulty: 'beginner', xp: 50,
-    desc: 'Read button presses with digitalRead().',
+    difficulty: 'beginner', xp: 60,
+    desc: 'Read button presses with digitalRead() and react in your sketch.',
     steps: [
       {
-        type: 'learn', title: 'Reading the World', icon: '🔘',
+        type: 'learn', title: 'From Outputs to Inputs', icon: '🔘',
         content: `
-<h2>From Outputs to Inputs!</h2>
-<p>So far you've controlled outputs (LEDs). Now let's <em>read inputs</em> from the outside world — like button presses!</p>
+<h2>Making Arduino Listen to the World!</h2>
+<p>So far your Arduino has only <em>talked</em> — blinking LEDs, writing to Serial. Now it's time to make it <em>listen</em>!</p>
+<p>The most common input device is a <strong>pushbutton</strong>. When pressed, it completes an electrical circuit.</p>
+<div class="info-box">
+  🔘 A pushbutton is like a light switch — it's either <strong>open</strong> (no connection) or <strong>closed</strong> (connected).
+</div>
 <p>Digital inputs read only two states:</p>
 <ul>
-  <li><strong>HIGH (1)</strong> — button released / 5 volts</li>
-  <li><strong>LOW (0)</strong> — button pressed / 0 volts</li>
+  <li><strong>HIGH (1)</strong> — 5 volts (no connection / button not pressed)</li>
+  <li><strong>LOW (0)</strong> — 0 volts / ground (button pressed)</li>
 </ul>
-<div class="info-box">
-  <code>pinMode(2, INPUT_PULLUP)</code> — set pin 2 as input<br>
-  <code>int state = digitalRead(2)</code> — read it!
-</div>
-<div class="info-box tip" style="margin-top:10px">
-  <strong>INPUT_PULLUP</strong> activates an internal resistor that keeps the pin at HIGH when nothing is connected. When a button connects the pin to ground, it reads LOW. This is the easiest way to wire a button!
-</div>`,
+<p>The key function for reading a pin is <code>digitalRead(pin)</code>. It returns either <code>HIGH</code> (1) or <code>LOW</code> (0).</p>`,
       },
       {
-        type: 'run', title: 'Read a Button', icon: '▶',
+        type: 'learn', title: 'INPUT_PULLUP — The Easy Button Trick', icon: '⬆️',
         content: `
-<h2>Run the Button Sketch!</h2>
-<p>Click <strong>▶ Run</strong> to see <code>digitalRead()</code> in action.</p>
-<p>In this sketch, pin 2 is read and the result is used to control pin 13. In the simulator it defaults to HIGH (button not pressed), so you'll see "Waiting..." in the Serial Monitor.</p>
+<h2>Why INPUT_PULLUP Makes Life Easier</h2>
+<p>Without a resistor, an unconnected input pin "floats" — it can randomly read HIGH or LOW, causing erratic behavior. That's bad!</p>
+<p>Two ways to wire a button:</p>
+<div class="info-box">
+  <strong>INPUT</strong> — needs an external 10kΩ pull-down resistor to work reliably<br>
+  → Button pressed = HIGH, released = LOW
+</div>
+<div class="info-box tip" style="margin-top:10px">
+  <strong>INPUT_PULLUP</strong> — uses Arduino's built-in resistor. No extra parts! ✅<br>
+  → Button pressed = <strong>LOW</strong>, released = <strong>HIGH</strong> (logic is flipped!)
+</div>
+<pre><code>pinMode(2, INPUT_PULLUP);  // Enable built-in pull-up
+int state = digitalRead(2);
+// state == HIGH when button is NOT pressed
+// state == LOW  when button IS pressed</code></pre>
+<p>Always use <code>INPUT_PULLUP</code> when possible — it's simpler and more reliable!</p>`,
+        code: `// Wiring test: see what digitalRead returns
+void setup() {
+  pinMode(2, INPUT_PULLUP);  // Built-in pull-up resistor
+  Serial.begin(9600);
+  Serial.println("Reading pin 2...");
+}
+
+void loop() {
+  int state = digitalRead(2);
+  Serial.print("Pin 2 = ");
+  Serial.println(state);  // 1 = HIGH (released), 0 = LOW (pressed)
+  delay(500);
+}`,
+      },
+      {
+        type: 'run', title: 'Try the Simulator Button!', icon: '▶',
+        content: `
+<h2>Press the Virtual Button! 🔘</h2>
+<p>Click <strong>▶ Run</strong> — the simulator will show a <strong>green button for Pin 2</strong> in the "Digital Inputs" section!</p>
 <div class="info-box tip">
-  💡 On a real Arduino, you'd press a physical button connected to pin 2 and ground. The LED on pin 13 would light up!
+  🖱️ <strong>Hold the green button</strong> while the sketch is running to simulate pressing a real button.<br><br>
+  Watch the Serial Monitor — when you hold the button, the value drops from <strong>1 → 0</strong> (because INPUT_PULLUP inverts the logic).
+</div>
+<p>The button area appears automatically when your sketch calls <code>pinMode(pin, INPUT_PULLUP)</code>. Try holding it and releasing it — see the values change live!</p>`,
+        code: `void setup() {
+  pinMode(2, INPUT_PULLUP);  // Built-in pull-up resistor
+  Serial.begin(9600);
+  Serial.println("Reading pin 2...");
+}
+
+void loop() {
+  int state = digitalRead(2);
+  Serial.print("Pin 2 = ");
+  Serial.println(state);  // 1 = released, 0 = pressed
+  delay(500);
+}`,
+      },
+      {
+        type: 'run', title: 'Button Controls an LED!', icon: '💡',
+        content: `
+<h2>Connect Input to Output!</h2>
+<p>Now let's make something useful: <strong>hold the button → LED turns on</strong>. Release the button → LED turns off.</p>
+<p>Click <strong>▶ Run</strong>, then <strong>hold the Pin 2 button</strong> in the simulator to see the LED light up!</p>
+<div class="info-box">
+  📋 <strong>Pattern:</strong><br>
+  • Read button with <code>digitalRead(2)</code><br>
+  • If result is <code>LOW</code> (pressed) → turn LED on<br>
+  • If result is <code>HIGH</code> (released) → turn LED off
+</div>
+<div class="info-box tip" style="margin-top:8px">
+  💡 Notice we check for <code>LOW</code> to mean "pressed" — that's the INPUT_PULLUP flip!
 </div>`,
         code: `void setup() {
-  pinMode(13, OUTPUT);      // LED
-  pinMode(2, INPUT_PULLUP); // Button (with pull-up)
+  pinMode(13, OUTPUT);      // LED output
+  pinMode(2, INPUT_PULLUP); // Button input
   Serial.begin(9600);
 }
 
@@ -429,6 +489,55 @@ void loop() {
 }`,
       },
       {
+        type: 'learn', title: 'Counting Button Presses', icon: '🔢',
+        content: `
+<h2>Remembering State Between Loops</h2>
+<p>What if you want to count how many times a button is pressed? You need to detect the <em>moment</em> it changes — called detecting an <strong>edge</strong>.</p>
+<p>The trick: remember the <em>previous</em> button state, and only count when it transitions from HIGH → LOW:</p>
+<pre><code>int lastState = HIGH;  // remember previous state
+
+void loop() {
+  int currentState = digitalRead(2);
+
+  if (lastState == HIGH && currentState == LOW) {
+    // Just pressed! Count it.
+    count++;
+  }
+
+  lastState = currentState;  // update memory
+  delay(50);
+}</code></pre>
+<div class="info-box tip">
+  💡 This is called <strong>edge detection</strong>. It's used everywhere — counting objects on a conveyor belt, detecting door opens, tracking button taps, etc.
+</div>`,
+        code: `int count = 0;
+int lastState = HIGH;  // Track previous button state
+
+void setup() {
+  pinMode(13, OUTPUT);
+  pinMode(2, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("Press counter ready!");
+}
+
+void loop() {
+  int currentState = digitalRead(2);
+
+  // Detect HIGH → LOW transition = button just pressed
+  if (lastState == HIGH && currentState == LOW) {
+    count++;
+    Serial.print("Button pressed! Count = ");
+    Serial.println(count);
+    digitalWrite(13, HIGH);
+    delay(100);
+    digitalWrite(13, LOW);
+  }
+
+  lastState = currentState;
+  delay(50);
+}`,
+      },
+      {
         type: 'challenge', title: 'Challenge: Button Controlled LED', icon: '🎯',
         content: `
 <h2>🎯 Your Challenge</h2>
@@ -436,24 +545,30 @@ void loop() {
 <ol>
   <li>Sets pin 13 as <code>OUTPUT</code> and pin 2 as <code>INPUT_PULLUP</code></li>
   <li>Reads the button state with <code>digitalRead(2)</code></li>
-  <li>Prints the state to Serial using <code>Serial.println</code></li>
+  <li>Turns LED on when button pressed (<code>LOW</code>), off when released</li>
+  <li>Prints the state to Serial with <code>Serial.println</code></li>
 </ol>
+<div class="info-box tip">
+  🖱️ After clicking "Check My Code", hold the <strong>Pin 2 button</strong> in the simulator to test it visually!
+</div>
 <div class="info-box">
-  Checker looks for: <code>INPUT_PULLUP</code>, <code>digitalRead</code>, and <code>Serial.println</code>
+  Checker looks for: <code>INPUT_PULLUP</code>, <code>digitalRead</code>, <code>Serial.println</code>, and <code>digitalWrite(13</code>
 </div>`,
         code: `void setup() {
   // Set up pins here
 }
 
 void loop() {
-  // Read pin 2 and print the state
+  // Read pin 2 and control the LED
+  // Also print the button state to Serial
 }`,
         validate: (code, _sim) => {
           return /INPUT_PULLUP/.test(code) &&
                  /digitalRead/.test(code) &&
-                 /Serial\.println/.test(code);
+                 /Serial\.println/.test(code) &&
+                 /digitalWrite\s*\(\s*13/.test(code);
         },
-        hint: 'In setup: pinMode(13, OUTPUT); pinMode(2, INPUT_PULLUP);  In loop: int btn = digitalRead(2); Serial.println(btn);',
+        hint: 'In setup: pinMode(13,OUTPUT); pinMode(2,INPUT_PULLUP);  In loop: int btn=digitalRead(2); if(btn==LOW){digitalWrite(13,HIGH);}else{digitalWrite(13,LOW);} Serial.println(btn);',
       },
       {
         type: 'quiz', title: 'Quick Check', icon: '❓',
@@ -461,7 +576,7 @@ void loop() {
         q: 'With INPUT_PULLUP configured, what does the pin read when the button IS pressed?',
         opts: ['HIGH (1)', 'LOW (0)', 'It depends on the battery', '512'],
         correct: 1,
-        explain: 'With INPUT_PULLUP, pressing the button connects the pin to ground (0V), so it reads LOW. It reads HIGH when the button is NOT pressed!',
+        explain: 'With INPUT_PULLUP, pressing the button connects the pin to ground (0V), so it reads LOW. It reads HIGH when the button is NOT pressed — the logic is inverted!',
       },
     ],
   },
@@ -1365,6 +1480,802 @@ void loop() {
       },
     ],
   },
+
+  // ── 13. Traffic Light ───────────────────────────────────
+  {
+    id: 'traffic-light', title: 'Traffic Light Controller', icon: '🚦',
+    difficulty: 'beginner', xp: 55,
+    desc: 'Control multiple LEDs in sequence to simulate a real traffic light.',
+    steps: [
+      {
+        type: 'learn', title: 'Multiple Outputs at Once', icon: '🚦',
+        content: `
+<h2>Controlling More Than One LED!</h2>
+<p>So far you've used pin 13's built-in LED. Real projects use <strong>many pins at once</strong>. Let's build a traffic light!</p>
+<p>A traffic light has three LEDs:</p>
+<ul>
+  <li>🔴 <strong>Red</strong> → pin 11 — Stop!</li>
+  <li>🟡 <strong>Yellow</strong> → pin 10 — Get ready</li>
+  <li>🟢 <strong>Green</strong> → pin 9 — Go!</li>
+</ul>
+<div class="info-box tip">
+  💡 In the simulator, watch the pin LEDs in the <strong>Digital Pins</strong> row light up in sequence. Green circles = HIGH.
+</div>
+<p>Each pin must be set as <code>OUTPUT</code> in <code>setup()</code> before you can control it.</p>
+<div class="info-box">
+<pre><code>void setup() {
+  pinMode(11, OUTPUT);  // Red
+  pinMode(10, OUTPUT);  // Yellow
+  pinMode(9,  OUTPUT);  // Green
+}</code></pre>
+</div>`,
+      },
+      {
+        type: 'learn', title: 'The Traffic Light Sequence', icon: '🔄',
+        content: `
+<h2>Planning the Sequence</h2>
+<p>A real traffic light follows a strict sequence:</p>
+<ol>
+  <li>🔴 <strong>Red</strong> for 3 seconds → cars must stop</li>
+  <li>🟡 <strong>Yellow</strong> for 1 second → get ready</li>
+  <li>🟢 <strong>Green</strong> for 3 seconds → cars may go</li>
+  <li>🟡 <strong>Yellow</strong> for 1 second → slow down</li>
+  <li>Back to 🔴 Red...</li>
+</ol>
+<p>Each phase: turn one LED on, wait, turn it off, move to next.</p>
+<div class="info-box tip">
+  💡 Good practice: use <strong>constants</strong> or <strong>variables</strong> for pin numbers. Changing <code>RED_PIN = 11</code> in one place is much easier than hunting down every <code>11</code> in your code!
+</div>
+<pre><code>const int RED   = 11;
+const int AMBER = 10;
+const int GREEN = 9;</code></pre>`,
+        code: `const int RED   = 11;
+const int AMBER = 10;
+const int GREEN = 9;
+
+void setup() {
+  pinMode(RED,   OUTPUT);
+  pinMode(AMBER, OUTPUT);
+  pinMode(GREEN, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Traffic light ready!");
+}
+
+void loop() {
+  // Red phase
+  digitalWrite(RED, HIGH);
+  Serial.println("RED - Stop!");
+  delay(3000);
+  digitalWrite(RED, LOW);
+
+  // Amber (pre-green)
+  digitalWrite(AMBER, HIGH);
+  Serial.println("AMBER - Get ready...");
+  delay(1000);
+  digitalWrite(AMBER, LOW);
+
+  // Green phase
+  digitalWrite(GREEN, HIGH);
+  Serial.println("GREEN - Go!");
+  delay(3000);
+  digitalWrite(GREEN, LOW);
+
+  // Amber (pre-red)
+  digitalWrite(AMBER, HIGH);
+  Serial.println("AMBER - Slow down...");
+  delay(1000);
+  digitalWrite(AMBER, LOW);
+}`,
+      },
+      {
+        type: 'run', title: 'Run the Traffic Light!', icon: '▶',
+        content: `
+<h2>Watch the Lights Change! 🚦</h2>
+<p>Click <strong>▶ Run</strong> and watch pins 9, 10, 11 in the simulator light up in sequence!</p>
+<div class="info-box tip">
+  👀 <strong>Watch pins 9, 10, 11</strong> in the Digital Pins row. They should light up in the traffic light sequence. The Serial Monitor also tells you which phase is active.
+</div>
+<p>The delays are long (1–3 seconds) but the simulator shows each state clearly. This is the same pattern used in real traffic control systems!</p>`,
+        code: `const int RED   = 11;
+const int AMBER = 10;
+const int GREEN = 9;
+
+void setup() {
+  pinMode(RED,   OUTPUT);
+  pinMode(AMBER, OUTPUT);
+  pinMode(GREEN, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Traffic light ready!");
+}
+
+void loop() {
+  digitalWrite(RED, HIGH);
+  Serial.println("RED - Stop!");
+  delay(1000);
+  digitalWrite(RED, LOW);
+
+  digitalWrite(AMBER, HIGH);
+  Serial.println("AMBER - Get ready...");
+  delay(500);
+  digitalWrite(AMBER, LOW);
+
+  digitalWrite(GREEN, HIGH);
+  Serial.println("GREEN - Go!");
+  delay(1000);
+  digitalWrite(GREEN, LOW);
+
+  digitalWrite(AMBER, HIGH);
+  Serial.println("AMBER - Slow down...");
+  delay(500);
+  digitalWrite(AMBER, LOW);
+}`,
+      },
+      {
+        type: 'modify', title: 'Add a Pedestrian Button', icon: '✏️',
+        content: `
+<h2>Make It Interactive!</h2>
+<p>Real traffic lights have a <strong>pedestrian button</strong>. When pressed, it speeds up to red so pedestrians can cross!</p>
+<p>Add a button on pin 2 (<code>INPUT_PULLUP</code>). When pressed during the green phase, cut the green time short and go straight to red.</p>
+<div class="info-box tip">
+  🖱️ Run the sketch, then hold the <strong>Pin 2 button</strong> in the simulator to trigger the pedestrian crossing!
+</div>
+<p>Try modifying the code on the right — add <code>pinMode(2, INPUT_PULLUP)</code> in setup, then check <code>digitalRead(2)</code> during the green phase.</p>`,
+        code: `const int RED   = 11;
+const int AMBER = 10;
+const int GREEN = 9;
+
+void setup() {
+  pinMode(RED,   OUTPUT);
+  pinMode(AMBER, OUTPUT);
+  pinMode(GREEN, OUTPUT);
+  pinMode(2, INPUT_PULLUP);  // Pedestrian button
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Red phase
+  digitalWrite(RED, HIGH);
+  Serial.println("RED - Stop");
+  delay(1000);
+  digitalWrite(RED, LOW);
+
+  // Amber
+  digitalWrite(AMBER, HIGH);
+  delay(500);
+  digitalWrite(AMBER, LOW);
+
+  // Green — check for pedestrian button press
+  digitalWrite(GREEN, HIGH);
+  Serial.println("GREEN - Go");
+  for (int i = 0; i < 10; i++) {
+    delay(200);
+    if (digitalRead(2) == LOW) {
+      Serial.println("Pedestrian crossing!");
+      break;  // Cut green short!
+    }
+  }
+  digitalWrite(GREEN, LOW);
+
+  // Amber
+  digitalWrite(AMBER, HIGH);
+  delay(500);
+  digitalWrite(AMBER, LOW);
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Build the Traffic Light', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Build a traffic light controller that:</p>
+<ol>
+  <li>Uses <strong>3 different pins</strong> for red, amber, and green LEDs</li>
+  <li>Cycles through: red → amber → green → amber → (repeat)</li>
+  <li>Prints each phase name to <code>Serial</code></li>
+  <li>Uses <code>delay()</code> between each phase</li>
+</ol>
+<div class="info-box">
+  Checker looks for: at least 3 different <code>digitalWrite</code> pin numbers, <code>Serial.println</code>, and at least 3 <code>delay()</code> calls.
+</div>`,
+        code: `// Define your LED pins
+const int RED   = 11;
+const int AMBER = 10;
+const int GREEN = 9;
+
+void setup() {
+  // Set up your pins and Serial
+}
+
+void loop() {
+  // Implement the traffic light sequence!
+}`,
+        validate: (code, _sim) => {
+          const pins = new Set((code.match(/digitalWrite\s*\(\s*(\d+)/g) || [])
+            .map(m => m.match(/\d+/)[0]));
+          const delays = (code.match(/\bdelay\s*\(/g) || []).length;
+          return pins.size >= 2 && delays >= 3 && /Serial\.println/.test(code);
+        },
+        hint: 'In setup: pinMode(11,OUTPUT); pinMode(10,OUTPUT); pinMode(9,OUTPUT);  In loop: turn RED on, delay, off; AMBER on, delay, off; GREEN on, delay, off; AMBER on, delay, off.',
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'In a traffic light sketch, why do we use named constants like "const int RED = 11" instead of just writing 11 everywhere?',
+        opts: [
+          'Constants make the code run faster',
+          'It uses less memory on the Arduino',
+          'Makes code readable and easy to change pin numbers in one place',
+          'You must use constants for OUTPUT pins',
+        ],
+        correct: 2,
+        explain: 'Named constants make code self-documenting ("RED" is clearer than "11") and easy to maintain. If you rewire to pin 12, you only change one line!',
+      },
+    ],
+  },
+
+  // ── 14. Buzzer & Tone ───────────────────────────────────
+  {
+    id: 'buzzer', title: 'Buzzer & Sound with tone()', icon: '🎵',
+    difficulty: 'beginner', xp: 55,
+    desc: 'Make sounds and melodies using the tone() function with a piezo buzzer.',
+    steps: [
+      {
+        type: 'learn', title: 'Making Sound with Arduino', icon: '🎵',
+        content: `
+<h2>Arduino Can Make Noise!</h2>
+<p>A <strong>piezo buzzer</strong> is a tiny speaker that vibrates when you send it electrical pulses. Arduino's built-in <code>tone()</code> function makes this super easy!</p>
+<div class="info-box">
+  <code>tone(pin, frequency)</code> — play a note on a pin<br>
+  <code>tone(pin, frequency, duration)</code> — play for a set time<br>
+  <code>noTone(pin)</code> — stop the sound
+</div>
+<p><strong>Frequency</strong> determines the pitch:</p>
+<ul>
+  <li>261 Hz → Middle C</li>
+  <li>330 Hz → E</li>
+  <li>392 Hz → G</li>
+  <li>523 Hz → High C</li>
+  <li>Higher number = higher pitch</li>
+</ul>
+<div class="info-box tip">
+  🔊 In the simulator, <code>tone()</code> calls show up in the Serial Monitor so you can see what note would play on real hardware!
+</div>`,
+      },
+      {
+        type: 'run', title: 'Play Your First Note', icon: '▶',
+        content: `
+<h2>Beep! Boop! 🎵</h2>
+<p>Click <strong>▶ Run</strong> to "play" some tones. The simulator shows each tone call in the Serial Monitor.</p>
+<div class="info-box tip">
+  💡 On a real Arduino with a piezo buzzer connected to pin 8, you'd actually hear these notes playing!
+</div>
+<p>Notice how we use <code>delay()</code> to control how long each note sounds, then <code>noTone()</code> to silence it before the next note.</p>`,
+        code: `void setup() {
+  Serial.begin(9600);
+  Serial.println("Playing tones...");
+}
+
+void loop() {
+  tone(8, 262, 300);   // C  - 262 Hz for 300ms
+  delay(350);
+  tone(8, 330, 300);   // E  - 330 Hz
+  delay(350);
+  tone(8, 392, 300);   // G  - 392 Hz
+  delay(350);
+  tone(8, 523, 600);   // C5 - 523 Hz (longer)
+  delay(700);
+  noTone(8);
+  delay(1000);         // Rest between loops
+}`,
+      },
+      {
+        type: 'learn', title: 'Playing a Melody', icon: '🎼',
+        content: `
+<h2>Notes, Durations, and Arrays</h2>
+<p>To play a real melody, store the notes and durations in <strong>arrays</strong>:</p>
+<pre><code>int melody[] = {262, 294, 330, 262};     // C D E C
+int durations[] = {400, 400, 400, 800};  // ms each</code></pre>
+<p>Then loop through them with a <code>for</code> loop:</p>
+<pre><code>for (int i = 0; i < 4; i++) {
+  tone(8, melody[i], durations[i]);
+  delay(durations[i] + 50);  // tiny gap between notes
+  noTone(8);
+}</code></pre>
+<div class="info-box tip">
+  🎵 The 50ms gap between notes prevents them from blending together — it creates a clear distinction between notes (called an "articulation gap").
+</div>
+<p>The sketch on the right plays a simple 4-note tune. Try changing the frequencies to make your own melody!</p>`,
+        code: `// "Frère Jacques" opening phrase
+int melody[]    = {262, 294, 330, 262, 262, 294, 330, 262};
+int durations[] = {400, 400, 400, 400, 400, 400, 400, 400};
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Playing melody...");
+}
+
+void loop() {
+  for (int i = 0; i < 8; i++) {
+    Serial.print("Note: ");
+    Serial.print(melody[i]);
+    Serial.println(" Hz");
+    tone(8, melody[i], durations[i]);
+    delay(durations[i] + 50);
+    noTone(8);
+  }
+  delay(1500);  // Pause between repeats
+}`,
+      },
+      {
+        type: 'modify', title: 'Button-Triggered Beep', icon: '✏️',
+        content: `
+<h2>Press Button → Play Sound!</h2>
+<p>Combine buttons and sound: press the button on pin 2 to trigger a beep.</p>
+<div class="info-box tip">
+  🖱️ Run the sketch, then <strong>hold the Pin 2 button</strong> in the simulator to trigger the tone. Watch the Serial Monitor confirm it!
+</div>
+<p>Try modifying the frequency or the melody pattern. What note sounds like an alarm? What sounds like a game pickup?</p>`,
+        code: `void setup() {
+  pinMode(2, INPUT_PULLUP);  // Button on pin 2
+  Serial.begin(9600);
+  Serial.println("Press button to beep!");
+}
+
+void loop() {
+  if (digitalRead(2) == LOW) {
+    // Button pressed - play a beep!
+    Serial.println("Beep!");
+    tone(8, 1000, 200);  // 1000 Hz for 200ms
+    delay(250);
+  }
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: SOS Alarm!', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Create an SOS alarm that plays the Morse code pattern: <strong>3 short, 3 long, 3 short</strong> beeps.</p>
+<ul>
+  <li>Short beep: <code>tone(8, 800, 150)</code> + <code>delay(200)</code></li>
+  <li>Long beep: <code>tone(8, 800, 400)</code> + <code>delay(500)</code></li>
+  <li>Pause between S and O: <code>delay(300)</code></li>
+  <li>Pause between SOS repeats: <code>delay(1500)</code></li>
+</ul>
+<div class="info-box">
+  Checker looks for: <code>tone(</code> called at least 9 times (or in a loop), and <code>delay(</code> called at multiple different values.
+</div>`,
+        code: `void setup() {
+  Serial.begin(9600);
+  Serial.println("SOS Alarm!");
+}
+
+void loop() {
+  // S = 3 short beeps
+  // O = 3 long beeps
+  // S = 3 short beeps
+  // Then pause before repeating
+}`,
+        validate: (code, _sim) => {
+          const tones = (code.match(/\btone\s*\(/g) || []).length;
+          const delays = (code.match(/\bdelay\s*\(/g) || []).length;
+          // Either 9+ tone() calls, or uses a loop (for/while) with tone
+          const hasLoop = /\b(for|while)\s*\(/.test(code);
+          return (tones >= 6 || (hasLoop && tones >= 2)) && delays >= 4;
+        },
+        hint: 'Copy "tone(8,800,150); delay(200);" 3 times for S. Then "tone(8,800,400); delay(500);" 3 times for O. Then 3 more short. Add delay(1500) at the end.',
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'What does the frequency parameter in tone(pin, frequency) control?',
+        opts: [
+          'How loud the sound is',
+          'How long the sound plays',
+          'The pitch (musical note) of the sound',
+          'Which pin the buzzer is connected to',
+        ],
+        correct: 2,
+        explain: 'Frequency controls pitch — 262 Hz sounds like middle C, 523 Hz is an octave higher. Higher frequency = higher-pitched sound. Volume is controlled by the hardware (resistors), and duration is controlled by delay() or the optional 3rd parameter.',
+      },
+    ],
+  },
+
+  // ── 15. switch/case ─────────────────────────────────────
+  {
+    id: 'switch-case', title: 'switch/case Control Flow', icon: '🔀',
+    difficulty: 'intermediate', xp: 65,
+    desc: 'Use switch/case statements to handle multiple conditions cleanly.',
+    steps: [
+      {
+        type: 'learn', title: 'The Problem with Many if/else', icon: '🔀',
+        content: `
+<h2>When if/else Gets Messy</h2>
+<p>Imagine checking a menu value that could be 1, 2, 3, 4, or 5. With if/else:</p>
+<pre><code>if (choice == 1) { ... }
+else if (choice == 2) { ... }
+else if (choice == 3) { ... }
+else if (choice == 4) { ... }
+else if (choice == 5) { ... }
+else { ... }</code></pre>
+<p>That works, but it's repetitive. <strong>switch/case</strong> is cleaner for this pattern:</p>
+<pre><code>switch (choice) {
+  case 1: /* do thing 1 */ break;
+  case 2: /* do thing 2 */ break;
+  case 3: /* do thing 3 */ break;
+  default: /* anything else */ break;
+}</code></pre>
+<div class="info-box tip">
+  ⚠️ Always add <code>break;</code> at the end of each case! Without it, execution "falls through" to the next case — usually a bug.
+</div>`,
+      },
+      {
+        type: 'learn', title: 'switch/case Syntax', icon: '📖',
+        content: `
+<h2>How switch/case Works</h2>
+<p>Arduino evaluates the <em>expression</em> in <code>switch()</code> and jumps to the matching <code>case</code>:</p>
+<div class="info-box">
+<pre><code>switch (expression) {
+  case value1:
+    // code if expression == value1
+    break;
+  case value2:
+    // code if expression == value2
+    break;
+  default:
+    // code if NO case matches
+    break;
+}</code></pre>
+</div>
+<p>Key rules:</p>
+<ul>
+  <li><code>case</code> values must be <strong>constants</strong> (numbers or characters)</li>
+  <li><code>break</code> stops execution and exits the switch</li>
+  <li><code>default</code> is optional but good practice</li>
+  <li>Multiple cases can share code (fall-through on purpose)</li>
+</ul>
+<div class="info-box tip">
+  💡 switch/case is faster than if/else chains for many conditions, and is much more readable!
+</div>`,
+        code: `// Example: LED brightness levels using switch/case
+int level = 2;  // Try changing this to 1, 2, 3, or 4!
+
+void setup() {
+  pinMode(9, OUTPUT);
+  Serial.begin(9600);
+
+  switch (level) {
+    case 1:
+      analogWrite(9, 64);
+      Serial.println("Level 1: 25% brightness");
+      break;
+    case 2:
+      analogWrite(9, 128);
+      Serial.println("Level 2: 50% brightness");
+      break;
+    case 3:
+      analogWrite(9, 192);
+      Serial.println("Level 3: 75% brightness");
+      break;
+    case 4:
+      analogWrite(9, 255);
+      Serial.println("Level 4: 100% brightness");
+      break;
+    default:
+      analogWrite(9, 0);
+      Serial.println("Unknown level — LED off");
+      break;
+  }
+}
+
+void loop() {}`,
+      },
+      {
+        type: 'run', title: 'Mode Selector', icon: '▶',
+        content: `
+<h2>Switch Between Modes!</h2>
+<p>Click <strong>▶ Run</strong> to see a mode-selector sketch. The variable <code>mode</code> determines what the LED does.</p>
+<p>Try changing the <code>mode</code> variable to 1, 2, or 3 and re-running to see different behaviors!</p>
+<div class="info-box tip">
+  💡 This pattern is used in almost every real-world device — a washing machine's cycle selector, a game's difficulty setting, a device's operating mode.
+</div>`,
+        code: `int mode = 2;  // Change to 1, 2, or 3 and re-run!
+
+void setup() {
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+  Serial.print("Running mode: ");
+  Serial.println(mode);
+}
+
+void loop() {
+  switch (mode) {
+    case 1:
+      // Fast blink
+      digitalWrite(13, HIGH); delay(100);
+      digitalWrite(13, LOW);  delay(100);
+      break;
+
+    case 2:
+      // Slow pulse
+      digitalWrite(13, HIGH); delay(800);
+      digitalWrite(13, LOW);  delay(800);
+      break;
+
+    case 3:
+      // SOS pattern
+      for (int i = 0; i < 3; i++) {
+        digitalWrite(13, HIGH); delay(150);
+        digitalWrite(13, LOW);  delay(150);
+      }
+      delay(500);
+      break;
+
+    default:
+      // Mode unknown — LED off
+      digitalWrite(13, LOW);
+      Serial.println("Unknown mode!");
+      delay(1000);
+      break;
+  }
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Selector Switch', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Write a sketch that uses <code>switch/case</code> to select between at least 3 different LED behaviors based on a variable called <code>mode</code>:</p>
+<ol>
+  <li>Declare <code>int mode = 1;</code> (or any value 1–3)</li>
+  <li>Use <code>switch(mode)</code> with at least 3 cases</li>
+  <li>Each case does something different with an LED</li>
+  <li>Include a <code>default</code> case</li>
+  <li>Print the current mode to <code>Serial</code></li>
+</ol>
+<div class="info-box">
+  Checker looks for: <code>switch</code>, at least 3 <code>case</code>s, <code>default</code>, <code>break</code>, and <code>Serial.println</code>.
+</div>`,
+        code: `int mode = 1;  // Try 1, 2, or 3
+
+void setup() {
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+  // Print the mode here
+}
+
+void loop() {
+  // Use switch/case to do something different for each mode
+}`,
+        validate: (code, _sim) => {
+          const cases = (code.match(/\bcase\s+\d+/g) || []).length;
+          return /\bswitch\s*\(/.test(code) &&
+                 cases >= 3 &&
+                 /\bdefault\s*:/.test(code) &&
+                 /\bbreak\s*;/.test(code) &&
+                 /Serial\.println/.test(code);
+        },
+        hint: 'switch(mode) { case 1: digitalWrite(13,HIGH); delay(200); digitalWrite(13,LOW); delay(200); break; case 2: ... case 3: ... default: Serial.println("?"); break; }',
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'What happens if you forget to write "break;" at the end of a case in a switch statement?',
+        opts: [
+          'The sketch will not compile',
+          'Only that case is skipped',
+          'Execution falls through and runs the next case\'s code too',
+          'The Arduino resets automatically',
+        ],
+        correct: 2,
+        explain: '"Fall-through" means execution continues into the next case without stopping. This is sometimes intentional (to share code between cases) but is usually a bug. Always add break; unless you specifically want fall-through!',
+      },
+    ],
+  },
+
+  // ── 16. RGB LED ─────────────────────────────────────────
+  {
+    id: 'rgb-led', title: 'RGB LED — Full Color Control', icon: '🌈',
+    difficulty: 'intermediate', xp: 75,
+    desc: 'Mix red, green, and blue channels with PWM to create any color.',
+    steps: [
+      {
+        type: 'learn', title: 'What is an RGB LED?', icon: '🌈',
+        content: `
+<h2>One LED, Millions of Colors!</h2>
+<p>An <strong>RGB LED</strong> is actually <em>three LEDs in one package</em>: Red, Green, and Blue. By controlling the brightness of each channel with PWM, you can mix any color!</p>
+<div class="info-box">
+  🔴 Red   → connect to PWM pin (e.g., pin 11)<br>
+  🟢 Green → connect to PWM pin (e.g., pin 10)<br>
+  🔵 Blue  → connect to PWM pin (e.g., pin 9)
+</div>
+<p>Color mixing with light (additive color):</p>
+<ul>
+  <li>Red + Green = Yellow 🟡</li>
+  <li>Red + Blue = Magenta 🟣</li>
+  <li>Green + Blue = Cyan 🩵</li>
+  <li>Red + Green + Blue = White ⚪</li>
+  <li>None = Off / Black ⚫</li>
+</ul>
+<div class="info-box tip">
+  💡 Each channel gets a value 0–255 (from analogWrite). 0 = fully off, 255 = full brightness.
+</div>`,
+      },
+      {
+        type: 'learn', title: 'Setting Colors with PWM', icon: '🎨',
+        content: `
+<h2>analogWrite() for Each Channel</h2>
+<p>We use <code>analogWrite()</code> to control the brightness of each channel:</p>
+<pre><code>// Set RGB LED to any color
+void setColor(int red, int green, int blue) {
+  analogWrite(11, red);    // Red channel
+  analogWrite(10, green);  // Green channel
+  analogWrite(9,  blue);   // Blue channel
+}</code></pre>
+<p>Then call it with RGB values (0–255 each):</p>
+<div class="info-box">
+<pre><code>setColor(255, 0,   0);    // Pure Red
+setColor(0,   255, 0);    // Pure Green
+setColor(0,   0,   255);  // Pure Blue
+setColor(255, 165, 0);    // Orange!
+setColor(128, 0,   128);  // Purple</code></pre>
+</div>
+<div class="info-box tip">
+  🌐 These are exactly the same values as CSS colors on web pages! <code>rgb(255, 165, 0)</code> is orange on a webpage and an orange LED!
+</div>`,
+        code: `// Helper function to set RGB color
+void setColor(int r, int g, int b) {
+  analogWrite(11, r);
+  analogWrite(10, g);
+  analogWrite(9,  b);
+}
+
+void setup() {
+  pinMode(11, OUTPUT);  // Red
+  pinMode(10, OUTPUT);  // Green
+  pinMode(9,  OUTPUT);  // Blue
+  Serial.begin(9600);
+}
+
+void loop() {
+  Serial.println("Red");
+  setColor(255, 0, 0);
+  delay(800);
+
+  Serial.println("Green");
+  setColor(0, 255, 0);
+  delay(800);
+
+  Serial.println("Blue");
+  setColor(0, 0, 255);
+  delay(800);
+
+  Serial.println("Yellow");
+  setColor(255, 200, 0);
+  delay(800);
+
+  Serial.println("Purple");
+  setColor(128, 0, 128);
+  delay(800);
+
+  Serial.println("White");
+  setColor(255, 255, 255);
+  delay(800);
+}`,
+      },
+      {
+        type: 'run', title: 'Color Cycle in Action!', icon: '▶',
+        content: `
+<h2>Watch the Colors Change! 🌈</h2>
+<p>Click <strong>▶ Run</strong> to see colors cycle through. Watch the pin LEDs for pins 9, 10, and 11 change brightness!</p>
+<div class="info-box tip">
+  👀 The simulator shows PWM values as glowing green dots on each pin. When all three glow together (white mode), you'll see all three pins lit at once.
+</div>
+<p>The sketch auto-fades through a rainbow — this is the same technique used in colorful LED strips, smart bulbs, and RGB gaming keyboards!</p>`,
+        code: `void setColor(int r, int g, int b) {
+  analogWrite(11, r);
+  analogWrite(10, g);
+  analogWrite(9,  b);
+}
+
+void setup() {
+  pinMode(11, OUTPUT);
+  pinMode(10, OUTPUT);
+  pinMode(9,  OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Rainbow cycle...");
+}
+
+void loop() {
+  // Fade red → yellow → green → cyan → blue → magenta → red
+  for (int i = 0; i < 256; i++) { setColor(255, i, 0);       delay(4); } // R→Y
+  for (int i = 0; i < 256; i++) { setColor(255-i, 255, 0);   delay(4); } // Y→G
+  for (int i = 0; i < 256; i++) { setColor(0, 255, i);       delay(4); } // G→C
+  for (int i = 0; i < 256; i++) { setColor(0, 255-i, 255);   delay(4); } // C→B
+  for (int i = 0; i < 256; i++) { setColor(i, 0, 255);       delay(4); } // B→M
+  for (int i = 0; i < 256; i++) { setColor(255, 0, 255-i);   delay(4); } // M→R
+}`,
+      },
+      {
+        type: 'modify', title: 'Potentiometer Color Mixer', icon: '✏️',
+        content: `
+<h2>Mix Colors with Sliders!</h2>
+<p>Use the <strong>analog sliders (A0, A1, A2)</strong> in the simulator to mix your own colors in real-time!</p>
+<div class="info-box tip">
+  🎛️ Drag the <strong>A0, A1, A2 sliders</strong> while the sketch runs to mix red, green, and blue. The Serial Monitor shows the current RGB values.
+</div>
+<p>The sketch reads A0 for red, A1 for green, A2 for blue. Since <code>analogRead</code> returns 0–1023 and <code>analogWrite</code> needs 0–255, we use <code>map()</code> to convert.</p>`,
+        code: `void setup() {
+  pinMode(11, OUTPUT);  // Red
+  pinMode(10, OUTPUT);  // Green
+  pinMode(9,  OUTPUT);  // Blue
+  Serial.begin(9600);
+  Serial.println("Drag A0/A1/A2 sliders to mix color!");
+}
+
+void loop() {
+  // Read 0-1023 from sliders, map to 0-255 for PWM
+  int r = map(analogRead(A0), 0, 1023, 0, 255);
+  int g = map(analogRead(A1), 0, 1023, 0, 255);
+  int b = map(analogRead(A2), 0, 1023, 0, 255);
+
+  analogWrite(11, r);
+  analogWrite(10, g);
+  analogWrite(9,  b);
+
+  Serial.print("RGB(");
+  Serial.print(r); Serial.print(", ");
+  Serial.print(g); Serial.print(", ");
+  Serial.print(b); Serial.println(")");
+
+  delay(200);
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: RGB Controller', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Create an RGB LED controller that:</p>
+<ol>
+  <li>Sets pins 9, 10, 11 as <code>OUTPUT</code></li>
+  <li>Uses <code>analogWrite()</code> on all three pins with <strong>different values</strong></li>
+  <li>Creates at least 3 distinct colors in sequence</li>
+  <li>Prints each color name to <code>Serial.println</code></li>
+  <li>Uses <code>delay()</code> between colors</li>
+</ol>
+<div class="info-box">
+  Checker looks for: <code>analogWrite</code> on 3+ different pins, <code>Serial.println</code>, and 3+ <code>delay()</code> calls.
+</div>`,
+        code: `void setup() {
+  // Set up your LED pins
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Show at least 3 different colors using analogWrite()
+  // Print each color name to Serial
+}`,
+        validate: (code, _sim) => {
+          const awPins = new Set((code.match(/analogWrite\s*\(\s*(\d+)/g) || [])
+            .map(m => m.match(/\d+/)[0]));
+          const delays = (code.match(/\bdelay\s*\(/g) || []).length;
+          return awPins.size >= 2 && delays >= 3 && /Serial\.println/.test(code) && /analogWrite/.test(code);
+        },
+        hint: 'In loop: analogWrite(11, 255); analogWrite(10, 0); analogWrite(9, 0); Serial.println("Red"); delay(800);  Then repeat for Green and Blue with different values.',
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'What RGB values would you use to create the color YELLOW?',
+        opts: [
+          'Red=255, Green=255, Blue=0',
+          'Red=0, Green=255, Blue=255',
+          'Red=255, Green=0, Blue=255',
+          'Red=128, Green=128, Blue=128',
+        ],
+        correct: 0,
+        explain: 'Yellow is made by mixing full Red and full Green with no Blue — just like mixing paint! Red(255) + Green(255) + Blue(0) = Yellow. This is additive color mixing, which works with light (not paint).',
+      },
+    ],
+  },
+
 ];
 
 // ── Reference Data ─────────────────────────────────────
