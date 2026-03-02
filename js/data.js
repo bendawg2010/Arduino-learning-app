@@ -1,6 +1,6 @@
 /* ─────────────────────────────────────────────────────────
-   data.js  –  All lesson content, achievements, projects,
-               and reference material for ArduinoLearn.
+   data.js  –  Step-by-step lesson content for ArduinoLearn.
+   Each lesson has a "steps" array walked one at a time.
    ───────────────────────────────────────────────────────── */
 
 // ── Levels ───────────────────────────────────────────────
@@ -21,1352 +21,1347 @@ const LEVELS = [
 const ACHIEVEMENTS = [
   { id: 'first_lesson',    icon: '🚀', name: 'First Steps',     desc: 'Complete your very first lesson.',                  cond: s => s.completedLessons.length >= 1  },
   { id: 'blink_master',    icon: '💡', name: 'Blink Master',    desc: 'Complete the Blink lesson.',                        cond: s => s.completedLessons.includes('blink')  },
-  { id: 'quiz_ace',        icon: '🎯', name: 'Quiz Ace',        desc: 'Score 100% on any quiz.',                           cond: s => Object.values(s.quizScores).some(v => v === 100)  },
+  { id: 'quiz_ace',        icon: '🎯', name: 'Quiz Ace',        desc: 'Answer a quiz question correctly.',                 cond: s => Object.values(s.quizScores).some(v => v >= 100)  },
   { id: 'five_lessons',    icon: '🔥', name: 'On Fire',         desc: 'Complete 5 lessons.',                               cond: s => s.completedLessons.length >= 5  },
-  { id: 'all_beginner',    icon: '🌱', name: 'Beginner Graduate',desc: 'Complete all Beginner lessons.',                   cond: s => LESSONS.filter(l=>l.difficulty==='beginner').every(l=>s.completedLessons.includes(l.id))  },
-  { id: 'all_intermediate',icon: '⚡', name: 'Intermediate Pro', desc: 'Complete all Intermediate lessons.',               cond: s => LESSONS.filter(l=>l.difficulty==='intermediate').every(l=>s.completedLessons.includes(l.id))  },
-  { id: 'all_lessons',     icon: '🏆', name: 'Arduino Master',  desc: 'Complete every single lesson.',                     cond: s => LESSONS.every(l=>s.completedLessons.includes(l.id))  },
-  { id: 'speed_coder',     icon: '⏱️', name: 'Speed Coder',     desc: 'Pass a challenge on your first try.',               cond: s => s.firstTryPasses >= 1  },
-  { id: 'serial_sender',   icon: '📡', name: 'Signal Sender',   desc: 'Successfully run code that uses Serial.println.',   cond: s => s.serialUsed  },
-  { id: 'pwm_artist',      icon: '🎛️', name: 'PWM Artist',      desc: 'Use analogWrite in the simulator.',                 cond: s => s.pwmUsed  },
-  { id: 'challenger',      icon: '🏗️', name: 'Challenge Accepted',desc: 'Pass 3 challenges.',                             cond: s => s.challengesPassed >= 3  },
-  { id: 'brainiac',        icon: '🧠', name: 'Brainiac',        desc: 'Score 100% on 3 different quizzes.',                cond: s => Object.values(s.quizScores).filter(v=>v===100).length >= 3  },
+  { id: 'all_lessons',     icon: '🎓', name: 'Graduate',        desc: 'Complete all 12 lessons.',                          cond: s => s.completedLessons.length >= 12 },
+  { id: 'serial_user',     icon: '📡', name: 'Talker',          desc: 'Use Serial.println() in your code.',                cond: s => s.serialUsed  },
+  { id: 'pwm_user',        icon: '🌈', name: 'Fader',           desc: 'Use analogWrite() for PWM.',                        cond: s => s.pwmUsed     },
+  { id: 'first_challenge', icon: '💪', name: 'Challenger',      desc: 'Pass your first challenge.',                        cond: s => s.challengesPassed >= 1  },
+  { id: 'five_challenges', icon: '🏋️', name: 'Iron Coder',     desc: 'Pass 5 challenges.',                                cond: s => s.challengesPassed >= 5  },
+  { id: 'first_try',       icon: '⚡', name: 'First Try!',      desc: 'Pass a challenge on the first attempt.',            cond: s => s.firstTryPasses >= 1    },
+  { id: 'xp_500',          icon: '⭐', name: 'XP Grinder',      desc: 'Earn 500 total XP.',                                cond: s => s.xp >= 500   },
+  { id: 'xp_1000',         icon: '🌟', name: 'XP Master',       desc: 'Earn 1000 total XP.',                               cond: s => s.xp >= 1000  },
 ];
 
 // ── Lessons ───────────────────────────────────────────────
 const LESSONS = [
-  /* ══════════════════════════════════════════════════════
-     BEGINNER TRACK
-     ══════════════════════════════════════════════════════ */
+
+  // ── 1. Introduction ─────────────────────────────────────
   {
-    id: 'intro',
-    title: 'Introduction to Arduino',
-    icon: '🤖',
-    difficulty: 'beginner',
-    xp: 25,
-    desc: 'Discover what Arduino is, how it works, and write your very first sketch.',
-    theory: `
-<h2>What Is Arduino?</h2>
-<p>Arduino is an open-source electronics platform that combines a <strong>microcontroller board</strong> with an easy-to-use programming environment. It was invented in 2005 in Italy and has since powered millions of projects — from blinking LEDs to full robotic systems.</p>
-
+    id: 'intro', title: 'Introduction to Arduino', icon: '🤖',
+    difficulty: 'beginner', xp: 30,
+    desc: 'Learn what Arduino is and write your very first sketch.',
+    steps: [
+      {
+        type: 'learn', title: 'What is an Arduino?', icon: '🤖',
+        content: `
+<h2>Welcome to ArduinoLearn! 🎉</h2>
+<p>An <strong>Arduino</strong> is a small, affordable computer you can program to control the physical world — lights, motors, sensors, robots, and more!</p>
+<p>Think of it like this:</p>
 <div class="info-box">
-  <strong>💡 Key idea:</strong> Arduino reads inputs (sensors, buttons, signals) and turns them into outputs (LEDs, motors, sounds). You tell it what to do by uploading a <em>sketch</em> (program).
+  🧠 <strong>Regular computer</strong> → runs apps, plays videos<br>
+  ⚡ <strong>Arduino</strong> → controls real-world electronics
 </div>
-
-<h2>The Arduino Uno</h2>
-<p>The <strong>Arduino Uno</strong> is the most popular beginner board. Here's what it has:</p>
+<p>The most popular board is the <strong>Arduino Uno</strong>. It has:</p>
 <ul>
-  <li><strong>14 Digital I/O pins</strong> — can be set as INPUT or OUTPUT</li>
-  <li><strong>6 Analog input pins</strong> (A0–A5) — read values from sensors</li>
-  <li><strong>6 PWM pins</strong> (marked ~) — for dimming LEDs, controlling motors</li>
-  <li><strong>32 KB Flash memory</strong> — where your program lives</li>
-  <li><strong>16 MHz clock</strong> — executes ~16 million instructions per second</li>
-  <li><strong>USB port</strong> — upload sketches and serial communication</li>
+  <li>14 <strong>digital pins</strong> — can be ON or OFF (like light switches)</li>
+  <li>6 <strong>analog pins</strong> — can read a range of values (like a dimmer)</li>
+  <li>A <strong>USB port</strong> to upload your programs</li>
 </ul>
-
-<h2>Anatomy of a Sketch</h2>
-<p>Every Arduino program (called a <code>sketch</code>) has exactly two required functions:</p>
-<ul>
-  <li><code>setup()</code> — runs <strong>once</strong> when the board powers on or resets</li>
-  <li><code>loop()</code> — runs <strong>forever</strong>, over and over, until power off</li>
-</ul>
-<p>Think of <code>setup()</code> as your morning routine (done once) and <code>loop()</code> as breathing (never stops).</p>
-
-<h2>Comments</h2>
-<p>Comments explain your code to humans — the Arduino ignores them completely:</p>
-<pre><code>// This is a single-line comment
-
-/* This is a
-   multi-line comment */</code></pre>
-
+<p>The code you write is called a <strong>sketch</strong>. Let's learn how one is structured!</p>`,
+      },
+      {
+        type: 'learn', title: 'The Two Magic Functions', icon: '🔄',
+        content: `
+<h2>setup() and loop() — The Heart of Every Sketch</h2>
+<p>Every Arduino sketch must have exactly <strong>two functions</strong>:</p>
 <div class="info-box tip">
-  <strong>✅ Tip:</strong> Comment your code! Future-you will thank present-you.
+  <strong>setup()</strong> — runs <em>once</em> when the Arduino powers on.<br>
+  Use it to configure pins and initialize things.
 </div>
-`,
-    code: `// ArduinoLearn – Lesson 1: Introduction
-// Every Arduino sketch has setup() and loop()
+<div class="info-box" style="margin-top:10px">
+  <strong>loop()</strong> — runs <em>over and over forever</em>.<br>
+  This is where your main program logic lives!
+</div>
+<p>Imagine a vending machine:</p>
+<ul>
+  <li><code>setup()</code> → "Power on, load prices, check inventory"</li>
+  <li><code>loop()</code> → Wait for coin → Dispense drink → Wait for coin → ...</li>
+</ul>
+<p>Look at the code on the right — that's the skeleton of every Arduino sketch you'll ever write. Click <strong>Next</strong> to run it!</p>`,
+        code: `// Every Arduino sketch has this exact structure!
 
 void setup() {
-  // This runs ONCE when Arduino starts
-  Serial.begin(9600);  // Open serial communication at 9600 baud
-  Serial.println("Hello, Arduino World!");
-  Serial.println("I am ready to learn!");
+  // Runs ONCE when Arduino powers on
+  Serial.begin(9600);  // Start Serial communication
+  Serial.println("Arduino is awake!");
 }
 
 void loop() {
-  // This runs FOREVER after setup()
-  Serial.println("Still running...");
-  delay(2000);  // Wait 2 seconds between prints
+  // Runs OVER AND OVER FOREVER
+  Serial.println("Hello from loop()!");
+  delay(1000);  // Wait 1 second (1000 ms)
 }`,
-    challenge: {
-      desc: 'Change the setup message to print your own name (e.g., "Hello from Alex!") and make the loop print every 1 second instead of 2.',
-      hint: 'Change the text in Serial.println() and change delay(2000) to delay(1000).',
-      validate: (code, sim) => {
-        return sim.serialLines.length >= 1 && sim.serialLines.some(l => l.includes('Hello'));
       },
-    },
-    quiz: [
       {
-        q: 'How many times does setup() run?',
-        opts: ['Forever, just like loop()', 'Once, when the board starts', 'Every 1 second', 'Only when a button is pressed'],
+        type: 'run', title: 'Run Your First Sketch!', icon: '▶',
+        content: `
+<h2>Time to Run It! 🚀</h2>
+<p>The sketch on the right is ready. Click <strong>▶ Run</strong> and watch the <strong>Serial Monitor</strong> below the simulator!</p>
+<div class="info-box tip">
+  💡 <strong>What to expect:</strong><br>
+  • "Arduino is awake!" appears <em>once</em> (from setup)<br>
+  • "Hello from loop()!" appears <em>every second</em> (from loop)
+</div>
+<p>After running, notice how <code>setup()</code> only printed one message, while <code>loop()</code> kept printing forever. That's the fundamental rhythm of all Arduino programs!</p>
+<p>🎉 You just ran your first Arduino sketch!</p>`,
+        code: `void setup() {
+  Serial.begin(9600);
+  Serial.println("Arduino is awake!");
+}
+
+void loop() {
+  Serial.println("Hello from loop()!");
+  delay(1000);
+}`,
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: `<p>Let's make sure you've got the basics down!</p>`,
+        q: 'What does the loop() function do in an Arduino sketch?',
+        opts: [
+          'Runs once when the Arduino powers on',
+          'Runs over and over forever',
+          'Reads values from sensors only',
+          'Stops the program after one cycle',
+        ],
         correct: 1,
-        explain: 'setup() runs exactly once when the Arduino powers on or resets. Use it for one-time initialization.',
-      },
-      {
-        q: 'What does Serial.begin(9600) do?',
-        opts: ['Sets pin 9600 as output', 'Waits 9600 milliseconds', 'Initializes serial communication at 9600 baud rate', 'Turns on an LED'],
-        correct: 2,
-        explain: 'Serial.begin(baud) opens the serial port at the specified baud rate. 9600 is a common default speed.',
-      },
-      {
-        q: 'What happens when loop() finishes one execution?',
-        opts: ['The program stops', 'It immediately starts over from the top', 'It waits for a button press', 'setup() runs again'],
-        correct: 1,
-        explain: 'The loop() function runs continuously — as soon as it reaches the end, it starts again from the beginning.',
+        explain: "loop() runs repeatedly forever — it's the heartbeat of your Arduino program! setup() is the one that runs only once.",
       },
     ],
   },
 
-  // ── Lesson 2: Blink ──────────────────────────────────
+  // ── 2. Blink ─────────────────────────────────────────────
   {
-    id: 'blink',
-    title: 'Blink — Hello, World!',
-    icon: '💡',
-    difficulty: 'beginner',
-    xp: 50,
-    desc: 'Make an LED blink — the classic "Hello World" of hardware programming.',
-    theory: `
-<h2>Your First LED</h2>
-<p>The classic first Arduino project is making the built-in LED blink. Every Arduino Uno has a tiny LED connected to <strong>pin 13</strong>, accessible via the constant <code>LED_BUILTIN</code>.</p>
-
-<h2>Key Functions</h2>
-<h3>pinMode(pin, mode)</h3>
-<p>Configures a pin as either an input or output. You must call this in <code>setup()</code> for any pin you use:</p>
-<pre><code>pinMode(13, OUTPUT);       // Pin 13 will send signals OUT
-pinMode(LED_BUILTIN, OUTPUT); // Same thing, more readable</code></pre>
-
-<h3>digitalWrite(pin, value)</h3>
-<p>Sets a digital pin HIGH (5V) or LOW (0V):</p>
-<pre><code>digitalWrite(13, HIGH);  // Turn LED ON  (5 volts)
-digitalWrite(13, LOW);   // Turn LED OFF (0 volts)</code></pre>
-
-<h3>delay(milliseconds)</h3>
-<p>Pauses the program for the given number of milliseconds. 1000ms = 1 second:</p>
-<pre><code>delay(1000);   // Wait 1 second
-delay(250);    // Wait 0.25 seconds
-delay(50);     // Wait 0.05 seconds (fast!)</code></pre>
-
+    id: 'blink', title: 'Blink an LED', icon: '💡',
+    difficulty: 'beginner', xp: 50,
+    desc: 'Make an LED blink — the "Hello World" of hardware!',
+    steps: [
+      {
+        type: 'learn', title: 'LEDs and Digital Pins', icon: '💡',
+        content: `
+<h2>Your First Physical Output — The LED!</h2>
+<p>An <strong>LED</strong> (Light Emitting Diode) is the simplest output device. On the Arduino Uno, <strong>Pin 13</strong> has a built-in LED — no wiring needed!</p>
 <div class="info-box">
-  <strong>HIGH vs LOW:</strong> HIGH means the pin outputs 5V (LED on). LOW means 0V (LED off). You can also write <code>1</code> for HIGH and <code>0</code> for LOW.
+  📍 <strong>Pin 13</strong> = the built-in LED on every Arduino Uno<br>
+  Also available as the constant: <code>LED_BUILTIN</code>
 </div>
-
-<h2>How Blinking Works</h2>
-<p>The loop does four things repeatedly: turn ON, wait, turn OFF, wait. By changing the delay values, you control the blink speed!</p>
-
+<p>Digital pins are like light switches. They're either:</p>
+<ul>
+  <li><strong>HIGH</strong> = 5 volts = LED <em>ON</em> ✅</li>
+  <li><strong>LOW</strong> = 0 volts = LED <em>OFF</em> ❌</li>
+</ul>
+<p>Before using a pin, you must tell Arduino its direction:</p>
+<ul>
+  <li><code>pinMode(13, OUTPUT)</code> — this pin <em>sends</em> signals out</li>
+  <li><code>pinMode(2, INPUT)</code> — this pin <em>receives</em> signals in</li>
+</ul>`,
+      },
+      {
+        type: 'learn', title: 'digitalWrite() and delay()', icon: '⚡',
+        content: `
+<h2>Turning Pins On and Off</h2>
+<p>Two functions control LED state:</p>
 <div class="info-box tip">
-  <strong>🔌 Circuit tip:</strong> An LED needs a resistor (usually 220Ω) in series to limit current. The built-in LED has this built in — external LEDs need an external resistor.
+  <code>digitalWrite(pin, HIGH)</code> → sets pin to 5V (ON)<br>
+  <code>digitalWrite(pin, LOW)</code> → sets pin to 0V (OFF)
 </div>
-`,
-    code: `// ArduinoLearn – Lesson 2: Blink
-// Make the built-in LED blink on and off
-
-void setup() {
-  // Set the built-in LED pin as an output
-  pinMode(LED_BUILTIN, OUTPUT);
-  Serial.begin(9600);
-  Serial.println("Blink sketch started!");
+<p>And to create pauses between states:</p>
+<div class="info-box">
+  <code>delay(ms)</code> → pause for <em>ms</em> milliseconds<br>
+  1000 ms = 1 second &nbsp;|&nbsp; 500 ms = half a second
+</div>
+<p>Put them together:</p>
+<pre><code>digitalWrite(13, HIGH);  // Turn ON
+delay(1000);             // Wait 1 second
+digitalWrite(13, LOW);   // Turn OFF
+delay(1000);             // Wait 1 second
+// (loop repeats this forever)</code></pre>
+<p>The code on the right is the famous "Blink" sketch. Ready to run it?</p>`,
+        code: `void setup() {
+  pinMode(13, OUTPUT);  // Set pin 13 as output
 }
 
 void loop() {
-  digitalWrite(LED_BUILTIN, HIGH);  // Turn LED ON
-  Serial.println("LED ON");
-  delay(1000);                      // Wait 1 second
-
-  digitalWrite(LED_BUILTIN, LOW);   // Turn LED OFF
-  Serial.println("LED OFF");
-  delay(1000);                      // Wait 1 second
+  digitalWrite(13, HIGH);  // LED ON
+  delay(1000);             // Wait 1 second
+  digitalWrite(13, LOW);   // LED OFF
+  delay(1000);             // Wait 1 second
 }`,
-    challenge: {
-      desc: 'Modify the sketch so the LED blinks FAST — 250ms on and 250ms off.',
-      hint: 'Change both delay(1000) values to delay(250).',
-      validate: (code, sim) => {
-        return code.includes('delay(250)') || code.includes('delay(200)') || code.includes('delay(100)');
-      },
-    },
-    quiz: [
-      {
-        q: 'What does LED_BUILTIN refer to?',
-        opts: ['A special external LED', 'Pin 13, the onboard LED', 'The power LED', 'Any LED you connect'],
-        correct: 1,
-        explain: 'LED_BUILTIN is a constant that equals 13 on most Arduino boards. It refers to the small LED soldered directly on the board.',
       },
       {
-        q: 'What does delay(500) do?',
-        opts: ['Waits 500 microseconds', 'Waits 5 seconds', 'Waits 500 milliseconds (half a second)', 'Blinks 500 times'],
+        type: 'run', title: 'Make It Blink!', icon: '▶',
+        content: `
+<h2>Blink Time! 💡</h2>
+<p>Hit <strong>▶ Run</strong> and watch the big LED in the simulator blink on and off!</p>
+<div class="info-box tip">
+  👀 <strong>Watch for:</strong> The large circle labeled "Pin 13 — LED_BUILTIN" should glow yellow (ON), pause, go dark (OFF), pause, repeat!
+</div>
+<p>This is the most famous Arduino program in history. Every single Arduino learner writes this first — and now you have too! 🎉</p>
+<p>After watching it blink a few times, move to the next step to <em>modify the speed</em>.</p>`,
+        code: `void setup() {
+  pinMode(13, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(13, HIGH);
+  delay(1000);
+  digitalWrite(13, LOW);
+  delay(1000);
+}`,
+      },
+      {
+        type: 'modify', title: 'Change the Speed', icon: '✏️',
+        content: `
+<h2>Make It Faster (or Slower)! ⚡</h2>
+<p>Try changing the <code>delay()</code> values to adjust the blink speed:</p>
+<ul>
+  <li>Try <code>delay(100)</code> for a super fast strobe!</li>
+  <li>Try <code>delay(2000)</code> for a slow, lazy blink</li>
+  <li>Try <em>different</em> values for ON vs OFF — the LED will spend more time in one state</li>
+</ul>
+<div class="info-box tip">
+  💡 <strong>Try this:</strong> <code>delay(100)</code> for ON and <code>delay(900)</code> for OFF — the LED flashes briefly but is mostly off. Like a heartbeat!
+</div>
+<p>Play around, then click <strong>Next</strong> when you're ready for the challenge!</p>`,
+        code: `void setup() {
+  pinMode(13, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(13, HIGH);
+  delay(500);   // ← change me!
+  digitalWrite(13, LOW);
+  delay(500);   // ← and me!
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Triple Blink!', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Make the LED blink <strong>3 times quickly</strong>, then pause for <strong>1 second</strong>, then repeat.</p>
+<div class="info-box">
+  Pattern: <strong>blink, blink, blink … long pause … blink, blink, blink …</strong><br><br>
+  Quick blink = <code>delay(150)</code> &nbsp;|&nbsp; Long pause = <code>delay(1000)</code>
+</div>
+<p>You'll need 3 ON/OFF pairs with short delays, then a long delay at the end of <code>loop()</code>.</p>`,
+        code: `void setup() {
+  pinMode(13, OUTPUT);
+}
+
+void loop() {
+  // 3 quick blinks, then a 1-second pause
+
+}`,
+        validate: (code, _sim) => {
+          const hi = (code.match(/digitalWrite\s*\(\s*13\s*,\s*HIGH\s*\)/g) || []).length;
+          const lo = (code.match(/digitalWrite\s*\(\s*13\s*,\s*LOW\s*\)/g) || []).length;
+          const longPause = /delay\s*\(\s*[89]\d{2}|delay\s*\(\s*[1-9]\d{3}/.test(code);
+          return hi >= 3 && lo >= 3 && longPause;
+        },
+        hint: 'Copy the "digitalWrite HIGH + delay(150) + digitalWrite LOW + delay(150)" block 3 times, then add delay(1000) at the end.',
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'What does digitalWrite(13, HIGH) do?',
+        opts: [
+          'Turns pin 13 off (0 volts)',
+          'Sets pin 13 as an output pin',
+          'Turns pin 13 on (5 volts)',
+          'Reads the current value of pin 13',
+        ],
         correct: 2,
-        explain: 'delay() takes milliseconds. 500ms = 0.5 seconds. 1000ms = 1 second.',
-      },
-      {
-        q: 'What mode should LED pins be set to?',
-        opts: ['INPUT', 'OUTPUT', 'INPUT_PULLUP', 'ANALOG'],
-        correct: 1,
-        explain: 'Pins that send signals (like to an LED) must be set to OUTPUT. Pins that receive signals (buttons, sensors) are set to INPUT.',
+        explain: 'digitalWrite(pin, HIGH) sets the pin to 5 volts — which supplies power to the LED and turns it on!',
       },
     ],
   },
 
-  // ── Lesson 3: Variables ──────────────────────────────
+  // ── 3. Variables ─────────────────────────────────────────
   {
-    id: 'variables',
-    title: 'Variables & Data Types',
-    icon: '📦',
-    difficulty: 'beginner',
-    xp: 50,
-    desc: 'Store and manage data using variables, constants, and different data types.',
-    theory: `
-<h2>What Is a Variable?</h2>
-<p>A variable is a named storage location in memory. Instead of writing the same number everywhere, you give it a meaningful name:</p>
-<pre><code>int ledPin = 13;          // Much better than magic numbers!
-int blinkDelay = 500;</code></pre>
-
-<h2>Data Types</h2>
-<p>Arduino C++ requires you to declare the <em>type</em> of data each variable holds:</p>
-<ul>
-  <li><code>int</code> — Integer: whole numbers from -32768 to 32767. Most common type.</li>
-  <li><code>long</code> — Large integer: up to 2 billion. Use for <code>millis()</code> values.</li>
-  <li><code>float</code> — Decimal number: e.g., <code>3.14</code>, <code>23.7</code></li>
-  <li><code>bool</code> / <code>boolean</code> — True or false only</li>
-  <li><code>char</code> — A single character: <code>'A'</code>, <code>'z'</code>, <code>'5'</code></li>
-  <li><code>String</code> — A sequence of characters: <code>"Hello World"</code></li>
-  <li><code>byte</code> — 0 to 255. Great for pin numbers and PWM values.</li>
-</ul>
-
-<h2>Constants</h2>
-<p>Use <code>const</code> for values that never change. This prevents accidental modifications and makes code more readable:</p>
-<pre><code>const int LED_PIN = 13;        // Won't change — use CAPS_CASE
-const int BLINK_SPEED = 500;</code></pre>
-
-<h2>Scope</h2>
-<p>Where you declare a variable determines where it can be used:</p>
-<ul>
-  <li><strong>Global</strong> (before setup) — accessible everywhere</li>
-  <li><strong>Local</strong> (inside a function) — only accessible in that function</li>
-</ul>
-
-<div class="info-box warn">
-  <strong>⚠️ Memory matters!</strong> Arduino Uno only has 2KB of RAM. Prefer <code>int</code> over <code>String</code> when possible.
+    id: 'variables', title: 'Variables & Data Types', icon: '📦',
+    difficulty: 'beginner', xp: 40,
+    desc: 'Store and use data with named variables.',
+    steps: [
+      {
+        type: 'learn', title: 'What Are Variables?', icon: '📦',
+        content: `
+<h2>Variables — Labeled Boxes for Your Data</h2>
+<p>A <strong>variable</strong> is like a labeled box where you store information your program can use and change.</p>
+<div class="info-box">
+  📦 <code>int ledPin = 13;</code><br>
+  Creates a box called <strong>ledPin</strong> that holds the number <strong>13</strong>.
 </div>
-`,
-    code: `// ArduinoLearn – Lesson 3: Variables & Data Types
-
-// --- Global constants (never change) ---
-const int LED_PIN = 13;
-const int BLINK_DELAY = 500;
-
-// --- Global variables (can change) ---
-int blinkCount = 0;
-bool ledState = false;
+<p>Instead of writing <code>13</code> everywhere, you write <code>ledPin</code>. If you later want to switch to pin 12, you change it in <em>one place</em>!</p>
+<p>Arduino uses <strong>typed</strong> variables — you must declare what kind of data you're storing:</p>
+<ul>
+  <li><code>int</code> — whole numbers: <code>0</code>, <code>42</code>, <code>-100</code></li>
+  <li><code>float</code> — decimal numbers: <code>3.14</code>, <code>-0.5</code></li>
+  <li><code>boolean</code> — only <code>true</code> or <code>false</code></li>
+  <li><code>char</code> — a single character: <code>'A'</code>, <code>'z'</code></li>
+  <li><code>String</code> — text: <code>"Hello World"</code></li>
+</ul>`,
+      },
+      {
+        type: 'run', title: 'Variables in Action', icon: '▶',
+        content: `
+<h2>See Variables Working!</h2>
+<p>This sketch uses variables to control blink speed. Hit <strong>▶ Run</strong> and watch the Serial Monitor!</p>
+<div class="info-box tip">
+  💡 Notice how easy it would be to tweak the speed — just change <code>onTime</code> or <code>offTime</code> at the top, and it affects the whole program!
+</div>`,
+        code: `int ledPin  = 13;    // Which pin the LED is on
+int onTime  = 300;   // How long LED stays ON (ms)
+int offTime = 700;   // How long LED stays OFF (ms)
+int count   = 0;     // Count how many blinks
 
 void setup() {
-  pinMode(LED_PIN, OUTPUT);
+  pinMode(ledPin, OUTPUT);
   Serial.begin(9600);
-
-  // Local variable (only available in setup)
-  String greeting = "Variable demo started!";
-  Serial.println(greeting);
+  Serial.println("Starting variable blink!");
 }
 
 void loop() {
-  // Toggle LED state using the boolean
-  ledState = !ledState;
-  digitalWrite(LED_PIN, ledState ? HIGH : LOW);
-
-  blinkCount++;
-
-  // Print using different data types
+  count = count + 1;
   Serial.print("Blink #");
-  Serial.print(blinkCount);
-  Serial.print(" | LED: ");
-  Serial.print(ledState ? "ON" : "OFF");
-  Serial.print(" | Uptime: ");
-  Serial.print(millis() / 1000.0, 1);  // float with 1 decimal
-  Serial.println("s");
+  Serial.println(count);
 
-  delay(BLINK_DELAY);
+  digitalWrite(ledPin, HIGH);
+  delay(onTime);
+  digitalWrite(ledPin, LOW);
+  delay(offTime);
 }`,
-    challenge: {
-      desc: 'Add a float variable called "voltage" set to 3.3, and print it in the loop using Serial.print.',
-      hint: 'Declare "float voltage = 3.3;" globally, then add Serial.print(voltage) in loop().',
-      validate: (code, sim) => {
-        return code.includes('float') && code.includes('voltage') && code.includes('3.3');
       },
-    },
-    quiz: [
       {
-        q: 'Which data type stores the number 3.14?',
-        opts: ['int', 'bool', 'float', 'char'],
+        type: 'challenge', title: 'Challenge: Configurable Blink', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Create a sketch that:</p>
+<ol>
+  <li>Declares a variable called <code>blinkSpeed</code> set to <strong>250</strong></li>
+  <li>Blinks pin 13 using <code>blinkSpeed</code> as the delay for <em>both</em> ON and OFF</li>
+  <li>Prints <code>"Blinking!"</code> to Serial each time</li>
+</ol>
+<div class="info-box">
+  Checker looks for: <code>blinkSpeed = 250</code>, <code>delay(blinkSpeed)</code>, and <code>Serial.println</code>
+</div>`,
+        code: `// Declare blinkSpeed here!
+
+void setup() {
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Blink using blinkSpeed for both delays
+}`,
+        validate: (code, _sim) => {
+          return /\bblinkSpeed\s*=\s*250\b/.test(code) &&
+                 /delay\s*\(\s*blinkSpeed\s*\)/.test(code) &&
+                 /Serial\.println/.test(code);
+        },
+        hint: 'Declare: int blinkSpeed = 250;  Then use delay(blinkSpeed) in loop(). Add Serial.println("Blinking!");',
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'Which data type would you use to store the number 3.14?',
+        opts: ['int', 'boolean', 'float', 'char'],
         correct: 2,
-        explain: 'float stores decimal (floating-point) numbers. int only stores whole numbers and would truncate 3.14 to 3.',
-      },
-      {
-        q: 'What does "const" mean in "const int LED = 13"?',
-        opts: ['The variable is global', 'The value cannot be changed', 'The variable is local', 'It is a function'],
-        correct: 1,
-        explain: 'const declares a constant — a value that is set once and never modified. Attempting to change it causes a compile error.',
-      },
-      {
-        q: 'A variable declared inside loop() is:',
-        opts: ['Global — accessible everywhere', 'Local — only exists inside loop()', 'A constant', 'Stored in EEPROM'],
-        correct: 1,
-        explain: 'Variables declared inside a function are local — they exist only during that function\'s execution and are re-created each time the function runs.',
+        explain: 'float stores decimal numbers like 3.14. int only stores whole numbers, boolean is true/false only, and char is a single character.',
       },
     ],
   },
 
-  // ── Lesson 4: Digital Input ──────────────────────────
+  // ── 4. Digital Input ─────────────────────────────────────
   {
-    id: 'digital-input',
-    title: 'Digital Input — Buttons',
-    icon: '🔘',
-    difficulty: 'beginner',
-    xp: 75,
-    desc: 'Read button presses with digitalRead and respond to user input.',
-    theory: `
-<h2>Reading Digital Inputs</h2>
-<p>While <code>digitalWrite</code> sends signals OUT, <code>digitalRead</code> reads signals IN — perfect for buttons and switches.</p>
-
-<h3>digitalRead(pin)</h3>
-<p>Returns either <code>HIGH</code> (1) or <code>LOW</code> (0) — it reads the current voltage on a pin:</p>
-<pre><code>int state = digitalRead(2);  // Read pin 2
-if (state == HIGH) {
-  // voltage is 5V — button not pressed (with pull-up)
-}</code></pre>
-
-<h2>Pull-Up Resistors</h2>
-<p>A button without a resistor creates a "floating" pin — it picks up noise and gives random readings. You need a <strong>pull-up</strong> or <strong>pull-down</strong> resistor:</p>
+    id: 'digital-input', title: 'Buttons & Digital Input', icon: '🔘',
+    difficulty: 'beginner', xp: 50,
+    desc: 'Read button presses with digitalRead().',
+    steps: [
+      {
+        type: 'learn', title: 'Reading the World', icon: '🔘',
+        content: `
+<h2>From Outputs to Inputs!</h2>
+<p>So far you've controlled outputs (LEDs). Now let's <em>read inputs</em> from the outside world — like button presses!</p>
+<p>Digital inputs read only two states:</p>
 <ul>
-  <li><strong>INPUT_PULLUP</strong> — Arduino's built-in 20kΩ resistor. Pin reads HIGH when floating, LOW when button pressed. This is the easiest option!</li>
-  <li><strong>External pull-down</strong> — resistor to GND. Pin reads LOW when floating, HIGH when pressed.</li>
+  <li><strong>HIGH (1)</strong> — button released / 5 volts</li>
+  <li><strong>LOW (0)</strong> — button pressed / 0 volts</li>
 </ul>
-
 <div class="info-box">
-  <strong>INPUT_PULLUP logic is inverted:</strong> Not pressed = HIGH (1), Pressed = LOW (0). This surprises many beginners!
+  <code>pinMode(2, INPUT_PULLUP)</code> — set pin 2 as input<br>
+  <code>int state = digitalRead(2)</code> — read it!
 </div>
-
-<h2>Wiring a Button</h2>
-<p>With <code>INPUT_PULLUP</code>: connect one leg of the button to a digital pin, other leg to GND. That's it — no external resistors needed!</p>
-
+<div class="info-box tip" style="margin-top:10px">
+  <strong>INPUT_PULLUP</strong> activates an internal resistor that keeps the pin at HIGH when nothing is connected. When a button connects the pin to ground, it reads LOW. This is the easiest way to wire a button!
+</div>`,
+      },
+      {
+        type: 'run', title: 'Read a Button', icon: '▶',
+        content: `
+<h2>Run the Button Sketch!</h2>
+<p>Click <strong>▶ Run</strong> to see <code>digitalRead()</code> in action.</p>
+<p>In this sketch, pin 2 is read and the result is used to control pin 13. In the simulator it defaults to HIGH (button not pressed), so you'll see "Waiting..." in the Serial Monitor.</p>
 <div class="info-box tip">
-  <strong>✅ Tip:</strong> Buttons are noisy! When you press/release, they "bounce" creating multiple rapid transitions. For reliable reading, add a small delay or use software debouncing.
-</div>
-`,
-    code: `// ArduinoLearn – Lesson 4: Digital Input
-
-const int BUTTON_PIN = 2;   // Button connected to pin 2
-const int LED_PIN = 13;     // Built-in LED
-
-void setup() {
-  pinMode(LED_PIN, OUTPUT);
-  // INPUT_PULLUP: uses Arduino's internal 20kΩ resistor
-  // Button = LOW when pressed, HIGH when not pressed
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  💡 On a real Arduino, you'd press a physical button connected to pin 2 and ground. The LED on pin 13 would light up!
+</div>`,
+        code: `void setup() {
+  pinMode(13, OUTPUT);      // LED
+  pinMode(2, INPUT_PULLUP); // Button (with pull-up)
   Serial.begin(9600);
-  Serial.println("Press the button (simulate by toggling in sidebar)!");
 }
 
 void loop() {
-  int buttonState = digitalRead(BUTTON_PIN);
+  int buttonState = digitalRead(2);
 
   if (buttonState == LOW) {
-    // Button IS pressed (LOW because of INPUT_PULLUP)
-    digitalWrite(LED_PIN, HIGH);
-    Serial.println("Button PRESSED — LED ON!");
+    // LOW = button pressed (INPUT_PULLUP inverts logic)
+    digitalWrite(13, HIGH);
+    Serial.println("Button pressed! LED ON.");
   } else {
-    // Button NOT pressed
-    digitalWrite(LED_PIN, LOW);
-  }
-
-  delay(50);  // Small delay to avoid flooding serial monitor
-}`,
-    challenge: {
-      desc: 'Modify the sketch to count button presses and print the count to the Serial monitor each time the button is pressed.',
-      hint: 'Add an int pressCount = 0; variable and increment it when the button is pressed. Use Serial.print to show the count.',
-      validate: (code, sim) => {
-        return (code.includes('pressCount') || code.includes('count')) && code.includes('++');
-      },
-    },
-    quiz: [
-      {
-        q: 'With INPUT_PULLUP, what does the pin read when the button is NOT pressed?',
-        opts: ['LOW (0)', 'HIGH (1)', 'Random values', '-1'],
-        correct: 1,
-        explain: 'With INPUT_PULLUP, the internal resistor pulls the pin to 5V (HIGH) when nothing is connected. Pressing the button connects it to GND, giving LOW.',
-      },
-      {
-        q: 'What is "button bounce"?',
-        opts: ['The button physically bouncing off the board', 'Rapid on/off signals when a button is pressed', 'A button that doesn\'t respond', 'Buttons wired in parallel'],
-        correct: 1,
-        explain: 'Button contacts mechanically bounce when pressed, creating many rapid LOW/HIGH transitions in milliseconds. Debouncing filters these out.',
-      },
-      {
-        q: 'Which function reads a digital pin?',
-        opts: ['analogRead()', 'digitalRead()', 'pinMode()', 'readPin()'],
-        correct: 1,
-        explain: 'digitalRead(pin) returns HIGH or LOW based on the current voltage at that pin.',
-      },
-    ],
-  },
-
-  // ── Lesson 5: Analog Input ───────────────────────────
-  {
-    id: 'analog-input',
-    title: 'Analog Input — Sensors',
-    icon: '📡',
-    difficulty: 'beginner',
-    xp: 75,
-    desc: 'Read analog sensors like potentiometers and light sensors using analogRead.',
-    theory: `
-<h2>The Analog World</h2>
-<p>Digital signals are either ON or OFF. But the real world isn't binary — temperature, light, humidity, and sound are all <strong>continuous values</strong>. Analog input lets you read these!</p>
-
-<h3>analogRead(pin)</h3>
-<p>Reads the voltage on an analog pin (A0–A5) and returns a value from <strong>0 to 1023</strong>:</p>
-<ul>
-  <li><strong>0V</strong> → returns 0</li>
-  <li><strong>2.5V</strong> → returns ~511</li>
-  <li><strong>5V</strong> → returns 1023</li>
-</ul>
-<p>This is a <strong>10-bit ADC</strong> (Analog-to-Digital Converter) — 2<sup>10</sup> = 1024 possible values.</p>
-
-<h2>The map() Function</h2>
-<p>Often you need to convert the 0–1023 range to something more useful. <code>map()</code> does this linearly:</p>
-<pre><code>// map(value, fromLow, fromHigh, toLow, toHigh)
-int percentage = map(sensorValue, 0, 1023, 0, 100);
-int angle = map(sensorValue, 0, 1023, 0, 180);
-int brightness = map(sensorValue, 0, 1023, 0, 255);</code></pre>
-
-<h2>Common Analog Sensors</h2>
-<ul>
-  <li><strong>Potentiometer</strong> — variable resistor, 0V to 5V based on knob position</li>
-  <li><strong>LDR (Light sensor)</strong> — resistance changes with light</li>
-  <li><strong>Temperature sensor (TMP36)</strong> — voltage changes with temperature</li>
-  <li><strong>Flex sensor</strong> — resistance changes when bent</li>
-</ul>
-
-<div class="info-box">
-  <strong>Simulator tip:</strong> Use the A0–A5 sliders on the right to simulate analog sensor values!
-</div>
-`,
-    code: `// ArduinoLearn – Lesson 5: Analog Input
-
-void setup() {
-  Serial.begin(9600);
-  Serial.println("Analog Input Demo");
-  Serial.println("Move the A0 slider to simulate a sensor!");
-}
-
-void loop() {
-  // Read raw analog value (0–1023)
-  int rawValue = analogRead(A0);
-
-  // Map to useful ranges
-  int percentage = map(rawValue, 0, 1023, 0, 100);
-  float voltage = rawValue * (5.0 / 1023.0);
-
-  // Print all formats
-  Serial.print("Raw: ");
-  Serial.print(rawValue);
-  Serial.print(" | Percentage: ");
-  Serial.print(percentage);
-  Serial.print("% | Voltage: ");
-  Serial.print(voltage, 2);  // 2 decimal places
-  Serial.println("V");
-
-  delay(500);  // Read twice per second
-}`,
-    challenge: {
-      desc: 'Read A0 and use map() to convert the value to a range of 0–180 (like a servo angle). Print the angle to Serial.',
-      hint: 'Use: int angle = map(rawValue, 0, 1023, 0, 180); then Serial.println(angle);',
-      validate: (code, sim) => {
-        return code.includes('map') && (code.includes('180') || code.includes('angle'));
-      },
-    },
-    quiz: [
-      {
-        q: 'What does analogRead() return when 5V is applied?',
-        opts: ['5', '255', '1023', '100'],
-        correct: 2,
-        explain: 'Arduino\'s 10-bit ADC divides 0–5V into 1024 steps (0–1023). 5V maps to 1023.',
-      },
-      {
-        q: 'What does map(512, 0, 1023, 0, 100) return?',
-        opts: ['50', '51', '100', '5'],
-        correct: 1,
-        explain: '512 is approximately halfway through 0–1023. Mapped to 0–100, it returns roughly 50 (actually 50.05, truncated to 50).',
-      },
-      {
-        q: 'Which pins support analogRead on Arduino Uno?',
-        opts: ['All 14 digital pins', 'Only pin 13', 'A0 through A5', 'Pins 3, 5, 6, 9, 10, 11'],
-        correct: 2,
-        explain: 'Arduino Uno has 6 dedicated analog input pins: A0 through A5.',
-      },
-    ],
-  },
-
-  // ── Lesson 6: PWM / Analog Output ───────────────────
-  {
-    id: 'pwm',
-    title: 'PWM — Analog Output',
-    icon: '🌈',
-    difficulty: 'beginner',
-    xp: 75,
-    desc: 'Create "analog-like" outputs using Pulse Width Modulation for LED dimming and motor control.',
-    theory: `
-<h2>What Is PWM?</h2>
-<p><strong>Pulse Width Modulation</strong> is a clever trick. Since Arduino can only output 0V or 5V digitally, it rapidly switches the pin ON and OFF to <em>simulate</em> voltages in between. Your eye (or motor) averages this out!</p>
-
-<div class="info-box">
-  <strong>Duty cycle:</strong> The percentage of time the signal is HIGH. 50% duty cycle ≈ 2.5V average. 25% ≈ 1.25V.
-</div>
-
-<h3>analogWrite(pin, value)</h3>
-<p>Writes a PWM value from <strong>0 to 255</strong> to a PWM-capable pin:</p>
-<pre><code>analogWrite(9, 0);    // 0% duty cycle  — fully OFF
-analogWrite(9, 127);  // 50% duty cycle  — half brightness
-analogWrite(9, 255);  // 100% duty cycle — fully ON</code></pre>
-
-<h2>PWM Pins on Arduino Uno</h2>
-<p>Only specific pins support PWM — they're marked with a <strong>~</strong> symbol:</p>
-<ul>
-  <li>Pins <strong>3, 5, 6, 9, 10, 11</strong></li>
-</ul>
-
-<h2>Common Uses</h2>
-<ul>
-  <li>💡 <strong>LED dimming</strong> — vary brightness smoothly</li>
-  <li>⚙️ <strong>DC motor speed</strong> — control RPM</li>
-  <li>🔊 <strong>Piezo buzzer</strong> — generate tones</li>
-  <li>🎛️ <strong>Servo position</strong> — via Servo library</li>
-</ul>
-
-<div class="info-box tip">
-  <strong>✅ Tip:</strong> You don't need to call <code>pinMode(pin, OUTPUT)</code> before <code>analogWrite()</code> — but it's good practice!
-</div>
-`,
-    code: `// ArduinoLearn – Lesson 6: PWM / Analog Output
-// Fade an LED in and out using PWM
-
-const int LED_PIN = 9;  // Must be a PWM pin (marked with ~)
-
-void setup() {
-  pinMode(LED_PIN, OUTPUT);
-  Serial.begin(9600);
-  Serial.println("Fading LED with PWM...");
-}
-
-void loop() {
-  // Fade IN: 0 to 255
-  Serial.println("Fading in...");
-  for (int brightness = 0; brightness <= 255; brightness += 5) {
-    analogWrite(LED_PIN, brightness);
-    delay(20);
-  }
-
-  // Fade OUT: 255 to 0
-  Serial.println("Fading out...");
-  for (int brightness = 255; brightness >= 0; brightness -= 5) {
-    analogWrite(LED_PIN, brightness);
-    delay(20);
+    // HIGH = button released
+    digitalWrite(13, LOW);
+    Serial.println("Waiting for button...");
   }
 
   delay(200);
 }`,
-    challenge: {
-      desc: 'Read the analog value from A0 (use the simulator slider) and use it to control the brightness of the LED on pin 9. Map 0–1023 → 0–255.',
-      hint: 'Read analogRead(A0), map it to 0–255, then analogWrite(9, mappedValue).',
-      validate: (code, sim) => {
-        return code.includes('analogWrite') && code.includes('map') && (code.includes('255') || code.includes('A0'));
       },
-    },
-    quiz: [
       {
-        q: 'What does analogWrite(9, 127) do?',
-        opts: ['Writes 127V to pin 9', 'Sets pin 9 to approximately 50% brightness', 'Reads analog pin 9', 'Turns pin 9 fully off'],
+        type: 'challenge', title: 'Challenge: Button Controlled LED', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Write a sketch that:</p>
+<ol>
+  <li>Sets pin 13 as <code>OUTPUT</code> and pin 2 as <code>INPUT_PULLUP</code></li>
+  <li>Reads the button state with <code>digitalRead(2)</code></li>
+  <li>Prints the state to Serial using <code>Serial.println</code></li>
+</ol>
+<div class="info-box">
+  Checker looks for: <code>INPUT_PULLUP</code>, <code>digitalRead</code>, and <code>Serial.println</code>
+</div>`,
+        code: `void setup() {
+  // Set up pins here
+}
+
+void loop() {
+  // Read pin 2 and print the state
+}`,
+        validate: (code, _sim) => {
+          return /INPUT_PULLUP/.test(code) &&
+                 /digitalRead/.test(code) &&
+                 /Serial\.println/.test(code);
+        },
+        hint: 'In setup: pinMode(13, OUTPUT); pinMode(2, INPUT_PULLUP);  In loop: int btn = digitalRead(2); Serial.println(btn);',
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'With INPUT_PULLUP configured, what does the pin read when the button IS pressed?',
+        opts: ['HIGH (1)', 'LOW (0)', 'It depends on the battery', '512'],
         correct: 1,
-        explain: 'analogWrite takes values 0–255. 127 is roughly half of 255, creating a ~50% duty cycle and ~50% brightness.',
-      },
-      {
-        q: 'Which of these is a PWM pin on Arduino Uno?',
-        opts: ['Pin 2', 'Pin 4', 'Pin 9', 'Pin 12'],
-        correct: 2,
-        explain: 'PWM pins on Arduino Uno are 3, 5, 6, 9, 10, and 11 — marked with ~ on the board.',
-      },
-      {
-        q: 'What does PWM stand for?',
-        opts: ['Power Wire Management', 'Pulse Width Modulation', 'Pin Write Mode', 'Periodic Wave Measure'],
-        correct: 1,
-        explain: 'Pulse Width Modulation rapidly switches a pin HIGH and LOW to simulate an analog output through the duty cycle.',
+        explain: 'With INPUT_PULLUP, pressing the button connects the pin to ground (0V), so it reads LOW. It reads HIGH when the button is NOT pressed!',
       },
     ],
   },
 
-  // ── Lesson 7: Serial Monitor ─────────────────────────
+  // ── 5. Analog Input ──────────────────────────────────────
   {
-    id: 'serial',
-    title: 'Serial Monitor — Debug Like a Pro',
-    icon: '📺',
-    difficulty: 'beginner',
-    xp: 50,
-    desc: 'Use the Serial Monitor to send and receive data — your window into the Arduino brain.',
-    theory: `
-<h2>Why Serial?</h2>
-<p>Arduino doesn't have a screen. The Serial Monitor is your <strong>debugging superpower</strong> — it lets you see what's happening inside your code in real time.</p>
-
-<h2>Serial Functions</h2>
-<h3>Serial.begin(baud)</h3>
-<p>Must be called first. Sets communication speed in bits/second:</p>
-<pre><code>Serial.begin(9600);   // Common default
-Serial.begin(115200); // Faster — useful for lots of data</code></pre>
-
-<h3>Serial.print() and Serial.println()</h3>
-<pre><code>Serial.print("Temperature: ");   // No newline
-Serial.print(23.5);
-Serial.println(" C");            // With newline at end
-// Output: Temperature: 23.5 C</code></pre>
-
-<h3>Printing different types</h3>
-<pre><code>Serial.println(42);         // Integer
-Serial.println(3.14, 3);    // Float with 3 decimal places
-Serial.println("hello");    // String
-Serial.println(true);       // Prints "1"
-Serial.println('A');        // Character</code></pre>
-
-<h3>Serial.available() and Serial.read()</h3>
-<p>Receive data <em>from</em> your computer:</p>
-<pre><code>if (Serial.available() > 0) {
-  char c = Serial.read();    // Read one character
-  Serial.print("Got: ");
-  Serial.println(c);
-}</code></pre>
-
-<div class="info-box tip">
-  <strong>✅ Best practice:</strong> Always use the same baud rate in your code AND in the Serial Monitor dropdown, or you'll see garbled text.
+    id: 'analog-input', title: 'Analog Sensors', icon: '🎛️',
+    difficulty: 'beginner', xp: 50,
+    desc: 'Read sensors that produce a range of values.',
+    steps: [
+      {
+        type: 'learn', title: 'Analog vs Digital', icon: '🎛️',
+        content: `
+<h2>The Real World Isn't Just ON/OFF!</h2>
+<p>A light sensor gets brighter gradually. A temperature sensor changes slowly. For these, we need <strong>analog input</strong>!</p>
+<p><strong>Digital:</strong> Only 0 or 1 (like a light switch)</p>
+<p><strong>Analog:</strong> A range of values (like a dimmer knob)</p>
+<div class="info-box">
+  Arduino Uno has 6 analog input pins: <strong>A0, A1, A2, A3, A4, A5</strong><br><br>
+  <code>analogRead(A0)</code> returns a value from <strong>0</strong> (0V) to <strong>1023</strong> (5V)
 </div>
-`,
-    code: `// ArduinoLearn – Lesson 7: Serial Monitor
-
-int loopCounter = 0;
-float simulatedTemp = 20.0;
-
-void setup() {
+<p>Common analog sensors you'll use:</p>
+<ul>
+  <li>🌡️ Temperature sensor (TMP36)</li>
+  <li>💡 Light sensor (LDR / photoresistor)</li>
+  <li>🎛️ Potentiometer (variable resistor knob)</li>
+  <li>🔊 Microphone / sound sensor</li>
+</ul>`,
+      },
+      {
+        type: 'learn', title: 'The map() Function', icon: '🗺️',
+        content: `
+<h2>Mapping Values to Useful Ranges</h2>
+<p>You get a raw value of 0–1023, but you might want 0–100% or 0–255. The <code>map()</code> function converts between ranges!</p>
+<div class="info-box tip">
+  <code>map(value, fromLow, fromHigh, toLow, toHigh)</code><br><br>
+  Example: <code>map(sensorVal, 0, 1023, 0, 100)</code><br>
+  Converts 0–1023 → 0–100 (a percentage!)
+</div>
+<p>The code on the right reads A0 and converts it to a percentage. After running, try moving the <strong>A0 slider</strong> in the simulator to see different values!</p>`,
+        code: `void setup() {
   Serial.begin(9600);
-
-  // Header message
-  Serial.println("╔══════════════════════════╗");
-  Serial.println("║  ArduinoLearn Serial Demo ║");
-  Serial.println("╚══════════════════════════╝");
-  Serial.println();
-  Serial.println("Monitoring sensor data...");
 }
 
 void loop() {
-  loopCounter++;
-  simulatedTemp += 0.1;  // Simulate rising temperature
+  int raw = analogRead(A0);               // Read 0-1023
+  int pct = map(raw, 0, 1023, 0, 100);   // Convert to 0-100%
 
-  // Formatted output
-  Serial.print("[Loop ");
-  Serial.print(loopCounter);
-  Serial.print("] Temp: ");
-  Serial.print(simulatedTemp, 1);  // 1 decimal place
-  Serial.print("°C | Sensor: ");
-  Serial.print(analogRead(A0));
-  Serial.println();
+  Serial.print("Raw: ");
+  Serial.print(raw);
+  Serial.print("  Percent: ");
+  Serial.print(pct);
+  Serial.println("%");
 
-  // Warning if temp is "high"
-  if (simulatedTemp > 21.0) {
-    Serial.println("  ⚠ Temperature above 21°C!");
+  delay(500);
+}`,
+      },
+      {
+        type: 'run', title: 'Read a Sensor!', icon: '▶',
+        content: `
+<h2>Analog Read in Action!</h2>
+<p>Click <strong>▶ Run</strong> and watch the Serial Monitor.</p>
+<p>The A0 slider in the simulator starts at 512 (middle value). The output will show both the raw reading and the percentage.</p>
+<div class="info-box tip">
+  💡 In a real project, this same code could read a light sensor, temperature, or a knob position — only the sensor hardware changes!
+</div>`,
+        code: `void setup() {
+  Serial.begin(9600);
+  Serial.println("Analog sensor reader ready!");
+}
+
+void loop() {
+  int raw = analogRead(A0);
+  int pct = map(raw, 0, 1023, 0, 100);
+
+  Serial.print("Sensor A0: ");
+  Serial.print(raw);
+  Serial.print(" -> ");
+  Serial.print(pct);
+  Serial.println("%");
+
+  delay(500);
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Sensor Monitor', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Write a sketch that reads <strong>A0</strong>, maps it to 0–100, and prints <em>both</em> the raw value and the percentage to Serial on the same line.</p>
+<div class="info-box">
+  Checker needs: <code>analogRead</code>, <code>map(</code>, and at least 2 <code>Serial.print</code>/<code>println</code> calls
+</div>`,
+        code: `void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Read A0, map it to 0-100, print both values
+
+  delay(500);
+}`,
+        validate: (code, _sim) => {
+          return /analogRead/.test(code) &&
+                 /\bmap\s*\(/.test(code) &&
+                 (code.match(/Serial\.(print|println)/g) || []).length >= 2;
+        },
+        hint: 'int raw = analogRead(A0); int pct = map(raw, 0, 1023, 0, 100); Serial.print(raw); Serial.print(" -> "); Serial.println(pct);',
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'What range of values does analogRead() return on an Arduino Uno?',
+        opts: ['0 to 255', '0 to 1023', '0 to 100', '0 to 5'],
+        correct: 1,
+        explain: 'analogRead() returns 0 to 1023 because the Arduino Uno has a 10-bit ADC (Analog-to-Digital Converter). 2^10 = 1024 steps, so 0–1023.',
+      },
+    ],
+  },
+
+  // ── 6. PWM ───────────────────────────────────────────────
+  {
+    id: 'pwm', title: 'PWM & Fading LEDs', icon: '🌈',
+    difficulty: 'intermediate', xp: 60,
+    desc: 'Use analogWrite() to dim LEDs and control speed.',
+    steps: [
+      {
+        type: 'learn', title: 'What is PWM?', icon: '🌈',
+        content: `
+<h2>Faking Analog Output with Pulse Width Modulation</h2>
+<p>Digital pins can only be fully ON or fully OFF. But what if you want to dim an LED to 50%? That's where <strong>PWM</strong> comes in!</p>
+<p>PWM rapidly flickers the pin ON and OFF — so fast (490 times per second) that your eye sees it as a dimmer level. The longer each pulse is ON vs OFF, the brighter it appears.</p>
+<div class="info-box">
+  This ON/OFF ratio is called the <strong>duty cycle</strong>:<br>
+  50% duty cycle → LED appears at half brightness
+</div>
+<p>On the Arduino Uno, the PWM pins are marked with a <strong>~</strong> symbol: <strong>3, 5, 6, 9, 10, 11</strong></p>
+<div class="info-box warn">
+  ⚠️ Only use <code>analogWrite()</code> on PWM pins (marked ~)! Using it on other pins won't work correctly.
+</div>`,
+      },
+      {
+        type: 'run', title: 'Fade an LED!', icon: '▶',
+        content: `
+<h2>Smooth Fading!</h2>
+<p>Click <strong>▶ Run</strong> to see a smooth fade effect on pin 9!</p>
+<div class="info-box tip">
+  <code>analogWrite(pin, value)</code><br>
+  value: <strong>0</strong> = fully off &nbsp;|&nbsp; <strong>128</strong> = 50% &nbsp;|&nbsp; <strong>255</strong> = fully on
+</div>
+<p>Watch pin 9~ in the simulator light up at different intensities as brightness increases then decreases!</p>`,
+        code: `void setup() {
+  pinMode(9, OUTPUT);  // Pin 9 is a PWM pin (~)
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Fade IN: 0 to 255
+  for (int b = 0; b <= 255; b += 5) {
+    analogWrite(9, b);
+    Serial.print("Brightness: ");
+    Serial.println(b);
+    delay(20);
+  }
+
+  // Fade OUT: 255 to 0
+  for (int b = 255; b >= 0; b -= 5) {
+    analogWrite(9, b);
+    delay(20);
+  }
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: PWM Fade', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Write a sketch that uses <code>analogWrite</code> on pin <strong>9</strong> to fade an LED. Your code must:</p>
+<ol>
+  <li>Use <code>analogWrite(9, ...)</code></li>
+  <li>Use a <code>for</code> loop to change brightness through a range</li>
+  <li>Print the brightness value to Serial</li>
+</ol>`,
+        code: `void setup() {
+  pinMode(9, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Fade the LED using analogWrite and a for loop
+
+}`,
+        validate: (code, sim) => {
+          return /analogWrite\s*\(\s*9/.test(code) &&
+                 /\bfor\s*\(/.test(code) &&
+                 /Serial\.(print|println)/.test(code) &&
+                 (sim.pwmUsed || /analogWrite/.test(code));
+        },
+        hint: 'for (int b = 0; b <= 255; b += 5) { analogWrite(9, b); Serial.println(b); delay(20); }',
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'What value in analogWrite() makes a pin 100% fully on?',
+        opts: ['100', '1023', '255', '5'],
+        correct: 2,
+        explain: 'analogWrite() uses 8-bit values: 0 = fully off, 255 = fully on (100%). Note: this is different from analogRead which returns 0–1023!',
+      },
+    ],
+  },
+
+  // ── 7. Serial ────────────────────────────────────────────
+  {
+    id: 'serial', title: 'Serial Communication', icon: '📡',
+    difficulty: 'intermediate', xp: 60,
+    desc: 'Send data between your Arduino and computer.',
+    steps: [
+      {
+        type: 'learn', title: 'Talking to Your Computer', icon: '📡',
+        content: `
+<h2>Serial — Your Arduino's Megaphone</h2>
+<p><strong>Serial communication</strong> lets your Arduino send text and numbers to your computer. It's your primary tool for debugging and monitoring!</p>
+<div class="info-box">
+  <strong>The key functions:</strong><br>
+  <code>Serial.begin(9600)</code> — start serial at 9600 baud (in setup)<br>
+  <code>Serial.print("Hello")</code> — print without newline<br>
+  <code>Serial.println("Hello")</code> — print WITH newline
+</div>
+<p><strong>Baud rate</strong> = how fast data is sent. 9600 is standard for learning.</p>
+<p>You can print all types:</p>
+<ul>
+  <li>Text: <code>Serial.println("Temperature:")</code></li>
+  <li>Numbers: <code>Serial.println(42)</code></li>
+  <li>Variables: <code>Serial.println(sensorValue)</code></li>
+  <li>Decimals: <code>Serial.println(3.14, 2)</code> — 2 decimal places</li>
+</ul>`,
+      },
+      {
+        type: 'run', title: 'Serial in Action', icon: '▶',
+        content: `
+<h2>Watch the Data Flow!</h2>
+<p>Click <strong>▶ Run</strong> to see formatted data streaming in the Serial Monitor. This is exactly what you'd see in the Arduino IDE!</p>`,
+        code: `void setup() {
+  Serial.begin(9600);
+  Serial.println("=== Arduino Data Logger ===");
+  Serial.println("Monitoring started!");
+}
+
+void loop() {
+  int sensorVal = analogRead(A0);
+  float voltage = sensorVal * (5.0 / 1023.0);
+
+  Serial.print("Raw: ");
+  Serial.print(sensorVal);
+  Serial.print("  Voltage: ");
+  Serial.print(voltage, 2);  // 2 decimal places
+  Serial.println("V");
+
+  delay(500);
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Data Logger', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Create a serial data logger that prints a formatted message with:</p>
+<ol>
+  <li>A label like <code>"Reading:"</code> using <code>Serial.print</code></li>
+  <li>A sensor value from <code>analogRead(A0)</code> using <code>Serial.println</code></li>
+</ol>
+<div class="info-box">
+  Checker needs: <code>Serial.begin</code>, <code>Serial.print</code>, <code>Serial.println</code>, and <code>analogRead</code>
+</div>`,
+        code: `void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Read a sensor and print a formatted message
+
+  delay(500);
+}`,
+        validate: (code, _sim) => {
+          return /Serial\.begin/.test(code) &&
+                 /Serial\.print\b/.test(code) &&
+                 /Serial\.println/.test(code) &&
+                 /analogRead/.test(code);
+        },
+        hint: 'Serial.print("Reading: "); Serial.println(analogRead(A0));',
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'What is the difference between Serial.print() and Serial.println()?',
+        opts: [
+          'println() is faster than print()',
+          'println() adds a new line at the end; print() does not',
+          'print() is for numbers; println() is for text',
+          'There is no difference',
+        ],
+        correct: 1,
+        explain: 'println() adds a newline character (\\n) at the end, so the next output starts on a new line. print() continues on the same line.',
+      },
+    ],
+  },
+
+  // ── 8. Control Flow ──────────────────────────────────────
+  {
+    id: 'control-flow', title: 'if / else Control Flow', icon: '🔀',
+    difficulty: 'intermediate', xp: 60,
+    desc: 'Make decisions in your code with if/else.',
+    steps: [
+      {
+        type: 'learn', title: 'Making Decisions', icon: '🔀',
+        content: `
+<h2>if / else — Your Code Makes Choices</h2>
+<p>Real programs make decisions: "If it's dark, turn on the light." In Arduino, you use <strong>if</strong> and <strong>else</strong>:</p>
+<pre><code>if (condition) {
+  // runs if condition is TRUE
+} else {
+  // runs if condition is FALSE
+}</code></pre>
+<p>Comparison operators for conditions:</p>
+<ul>
+  <li><code>==</code> equals &nbsp; <code>!=</code> not equal</li>
+  <li><code>&gt;</code> greater than &nbsp; <code>&lt;</code> less than</li>
+  <li><code>&gt;=</code> greater or equal &nbsp; <code>&lt;=</code> less or equal</li>
+</ul>
+<div class="info-box warn">
+  ⚠️ <strong>Most common mistake!</strong><br>
+  Using <code>=</code> (assigns a value) instead of <code>==</code> (compares values)<br>
+  <code>if (x = 5)</code> ❌ &nbsp;&nbsp; <code>if (x == 5)</code> ✅
+</div>`,
+      },
+      {
+        type: 'run', title: 'if/else in Action', icon: '▶',
+        content: `
+<h2>Light-Level Decision Making!</h2>
+<p>This sketch reads A0 (imagine it's a light sensor) and uses if/else to decide what to do. Click <strong>▶ Run</strong> and watch the Serial Monitor!</p>`,
+        code: `void setup() {
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int light = analogRead(A0);  // 0-1023
+
+  if (light < 300) {
+    digitalWrite(13, HIGH);
+    Serial.println("Dark! LED ON");
+  } else if (light < 700) {
+    digitalWrite(13, LOW);
+    Serial.println("Medium light — LED off");
+  } else {
+    digitalWrite(13, LOW);
+    Serial.println("Very bright — LED off");
+  }
+
+  Serial.print("Light value: ");
+  Serial.println(light);
+  delay(500);
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Smart Light', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Write a sketch using <code>if/else</code> that:</p>
+<ul>
+  <li>If <code>analogRead(A0)</code> is <strong>greater than 512</strong>: turn LED on, print "LED ON"</li>
+  <li>Otherwise: turn LED off, print "LED OFF"</li>
+</ul>
+<div class="info-box">
+  Checker needs: <code>if</code>, <code>else</code>, <code>analogRead</code>, <code>digitalWrite(13</code>, <code>Serial.println</code>
+</div>`,
+        code: `void setup() {
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int value = analogRead(A0);
+
+  // Add if/else here
+
+  delay(200);
+}`,
+        validate: (code, _sim) => {
+          return /\bif\s*\(/.test(code) &&
+                 /\belse\b/.test(code) &&
+                 /analogRead/.test(code) &&
+                 /digitalWrite\s*\(\s*13/.test(code) &&
+                 /Serial\.println/.test(code);
+        },
+        hint: 'if (value > 512) { digitalWrite(13, HIGH); Serial.println("LED ON"); } else { digitalWrite(13, LOW); Serial.println("LED OFF"); }',
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'What operator do you use to CHECK if two values are equal inside an if() condition?',
+        opts: ['= (single equals)', '== (double equals)', '!= (not equals)', '>= (greater or equal)'],
+        correct: 1,
+        explain: '== is the comparison operator. A single = is assignment (it sets a value). Always use == when comparing inside if conditions!',
+      },
+    ],
+  },
+
+  // ── 9. Loops ─────────────────────────────────────────────
+  {
+    id: 'loops', title: 'for & while Loops', icon: '🔁',
+    difficulty: 'intermediate', xp: 70,
+    desc: 'Repeat actions efficiently with loops.',
+    steps: [
+      {
+        type: 'learn', title: 'The for Loop', icon: '🔁',
+        content: `
+<h2>Repeat a Set Number of Times with for</h2>
+<p>A <code>for</code> loop repeats code a specific number of times. Perfect for counting, fading, or doing something N times!</p>
+<pre><code>for (start; condition; increment) {
+  // code to repeat
+}</code></pre>
+<p>Example — blink 5 times:</p>
+<pre><code>for (int i = 0; i &lt; 5; i++) {
+  digitalWrite(13, HIGH); delay(200);
+  digitalWrite(13, LOW);  delay(200);
+}</code></pre>
+<ul>
+  <li><code>int i = 0</code> — start at 0</li>
+  <li><code>i &lt; 5</code> — keep going while i is less than 5</li>
+  <li><code>i++</code> — add 1 to i after each run (shorthand for i = i + 1)</li>
+</ul>`,
+      },
+      {
+        type: 'learn', title: 'The while Loop', icon: '🔄',
+        content: `
+<h2>Repeat While Something is True</h2>
+<p>A <code>while</code> loop keeps going as long as a condition stays true. Good when you don't know the count ahead of time!</p>
+<pre><code>while (condition) {
+  // repeats while condition is true
+}</code></pre>
+<p>Example — count up until 5:</p>
+<pre><code>int count = 0;
+while (count &lt; 5) {
+  Serial.println(count);
+  count++;  // Don't forget this!
+}</code></pre>
+<div class="info-box warn">
+  ⚠️ Always make sure your condition will eventually become false, or you'll create an <strong>infinite loop</strong> that freezes your sketch!
+</div>
+<p>The code on the right shows both loops. Click <strong>Next</strong> to run it!</p>`,
+        code: `void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  // for loop: count 1 to 5
+  Serial.println("--- for loop ---");
+  for (int i = 1; i <= 5; i++) {
+    Serial.print("i = ");
+    Serial.println(i);
+  }
+
+  // while loop: count down from 3
+  Serial.println("--- while loop ---");
+  int n = 3;
+  while (n > 0) {
+    Serial.print("n = ");
+    Serial.println(n);
+    n--;
+  }
+
+  delay(2000);
+}`,
+      },
+      {
+        type: 'run', title: 'See Both Loops!', icon: '▶',
+        content: `
+<h2>Run and Watch!</h2>
+<p>Click <strong>▶ Run</strong> to see both loops working in the Serial Monitor!</p>
+<div class="info-box tip">
+  Notice the for loop counts UP and the while loop counts DOWN — and both finish before the delay and repeat.
+</div>`,
+        code: `void setup() {
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  Serial.println("=== for loop: blink 5 times ===");
+  for (int i = 0; i < 5; i++) {
+    digitalWrite(13, HIGH); delay(100);
+    digitalWrite(13, LOW);  delay(100);
+    Serial.print("Blink "); Serial.println(i + 1);
+  }
+
+  Serial.println("=== while loop: count to 3 ===");
+  int n = 1;
+  while (n <= 3) {
+    Serial.print("Count: "); Serial.println(n);
+    n++;
   }
 
   delay(1000);
 }`,
-    challenge: {
-      desc: 'Add code that prints "HOT!" when the A0 analog value is greater than 700, and "COLD!" when it is less than 300.',
-      hint: 'Read analogRead(A0) into a variable, then use if/else to check the value and Serial.println the appropriate message.',
-      validate: (code, sim) => {
-        return (code.includes('HOT') || code.includes('COLD')) && code.includes('analogRead');
-      },
-    },
-    quiz: [
-      {
-        q: 'What is the difference between Serial.print() and Serial.println()?',
-        opts: ['println() is faster', 'println() adds a newline character at the end', 'print() can only print numbers', 'There is no difference'],
-        correct: 1,
-        explain: 'Serial.println() prints the data and then moves to the next line. Serial.print() stays on the same line.',
       },
       {
-        q: 'What must you do before using Serial.print()?',
-        opts: ['Call Serial.read()', 'Call Serial.begin()', 'Call pinMode()', 'Nothing is needed'],
-        correct: 1,
-        explain: 'Serial.begin(baud) must be called in setup() to initialize the serial port before sending or receiving data.',
-      },
-      {
-        q: 'Serial.print(3.14159, 2) outputs:',
-        opts: ['3.14159', '3.14', '3', '3.1'],
-        correct: 1,
-        explain: 'The second argument to Serial.print() for floats specifies decimal places. So (3.14159, 2) prints "3.14".',
-      },
-    ],
-  },
-
-  /* ══════════════════════════════════════════════════════
-     INTERMEDIATE TRACK
-     ══════════════════════════════════════════════════════ */
-
-  // ── Lesson 8: Control Flow ───────────────────────────
-  {
-    id: 'control-flow',
-    title: 'Control Flow — if / else / switch',
-    icon: '🔀',
-    difficulty: 'intermediate',
-    xp: 100,
-    desc: 'Make decisions in your code with conditionals, logical operators, and switch statements.',
-    theory: `
-<h2>Making Decisions</h2>
-<p>Control flow lets your Arduino react differently based on conditions — "if the sensor is high, do this; otherwise, do that."</p>
-
-<h2>if / else if / else</h2>
-<pre><code>int value = analogRead(A0);
-
-if (value > 800) {
-  Serial.println("Very bright!");
-} else if (value > 400) {
-  Serial.println("Medium light");
-} else {
-  Serial.println("Dark");
-}</code></pre>
-
-<h2>Comparison Operators</h2>
-<ul>
-  <li><code>==</code> equals (note: NOT the assignment <code>=</code>!)</li>
-  <li><code>!=</code> not equals</li>
-  <li><code>&lt;</code>  less than</li>
-  <li><code>&gt;</code>  greater than</li>
-  <li><code>&lt;=</code> less than or equal</li>
-  <li><code>&gt;=</code> greater than or equal</li>
-</ul>
-
-<h2>Logical Operators</h2>
-<ul>
-  <li><code>&&</code> AND — both conditions must be true</li>
-  <li><code>||</code> OR  — at least one condition is true</li>
-  <li><code>!</code>  NOT — inverts the condition</li>
-</ul>
-<pre><code>if (temp > 20 && temp < 30) {
-  Serial.println("Comfortable!");
-}</code></pre>
-
-<h2>switch / case</h2>
-<p>Cleaner than many if/else chains when checking one variable against multiple values:</p>
-<pre><code>int mode = 2;
-switch (mode) {
-  case 1: Serial.println("Mode 1"); break;
-  case 2: Serial.println("Mode 2"); break;
-  case 3: Serial.println("Mode 3"); break;
-  default: Serial.println("Unknown"); break;
-}</code></pre>
-
-<div class="info-box warn">
-  <strong>⚠️ Common bug:</strong> Don't forget <code>break;</code> in switch cases! Without it, execution "falls through" to the next case.
-</div>
-`,
-    code: `// ArduinoLearn – Lesson 8: Control Flow
-// Traffic light simulator using analog sensor
-
-const int RED_LED    = 11;
-const int YELLOW_LED = 10;
-const int GREEN_LED  = 9;
-
-void setup() {
-  pinMode(RED_LED, OUTPUT);
-  pinMode(YELLOW_LED, OUTPUT);
-  pinMode(GREEN_LED, OUTPUT);
-  Serial.begin(9600);
-  Serial.println("Traffic Light Simulator");
-  Serial.println("Move the A0 slider to change state!");
-}
-
-void loop() {
-  int sensorValue = analogRead(A0);
-
-  // Turn all off first
-  digitalWrite(RED_LED, LOW);
-  digitalWrite(YELLOW_LED, LOW);
-  digitalWrite(GREEN_LED, LOW);
-
-  // Decide which LED to light
-  if (sensorValue < 341) {
-    digitalWrite(GREEN_LED, HIGH);
-    Serial.println("🟢 GREEN  — Go!");
-  } else if (sensorValue < 682) {
-    digitalWrite(YELLOW_LED, HIGH);
-    Serial.println("🟡 YELLOW — Slow down!");
-  } else {
-    digitalWrite(RED_LED, HIGH);
-    Serial.println("🔴 RED    — Stop!");
-  }
-
-  delay(500);
-}`,
-    challenge: {
-      desc: 'Add a fourth condition: if the sensor is between 300-400, print "AMBER" and blink the yellow LED twice.',
-      hint: 'Use && to check if the value is in range: if (val >= 300 && val <= 400). Use digitalWrite and delay to blink.',
-      validate: (code, sim) => {
-        return code.includes('&&') && (code.includes('AMBER') || code.includes('blink'));
-      },
-    },
-    quiz: [
-      {
-        q: 'What is wrong with: if (x = 5)?',
-        opts: ['Nothing, it works fine', '= assigns a value; == compares values. Should be if (x == 5)', 'x should be a float', 'Parentheses are wrong'],
-        correct: 1,
-        explain: '= is assignment (sets x to 5 and always evaluates to true). == is comparison (checks if x equals 5). This is a very common bug!',
-      },
-      {
-        q: 'What does && mean?',
-        opts: ['OR — either condition must be true', 'AND — both conditions must be true', 'NOT — inverts a condition', 'XOR — exactly one must be true'],
-        correct: 1,
-        explain: '&& is the logical AND operator. Both conditions on either side must be true for the overall expression to be true.',
-      },
-      {
-        q: 'What happens in a switch statement if you forget "break"?',
-        opts: ['Compilation error', 'The program crashes', 'Execution falls through to the next case', 'Nothing, break is optional'],
-        correct: 2,
-        explain: 'Without break, execution continues into the next case automatically — called "fall-through". Usually a bug!',
-      },
-    ],
-  },
-
-  // ── Lesson 9: Loops ──────────────────────────────────
-  {
-    id: 'loops',
-    title: 'Loops — for, while, do-while',
-    icon: '🔄',
-    difficulty: 'intermediate',
-    xp: 100,
-    desc: 'Repeat actions efficiently with for loops, while loops, and do-while loops.',
-    theory: `
-<h2>Why Loops?</h2>
-<p>Loops let you repeat code without copy-pasting. Instead of:</p>
-<pre><code>digitalWrite(2, HIGH); delay(100); digitalWrite(2, LOW);
-digitalWrite(3, HIGH); delay(100); digitalWrite(3, LOW);
-// ... 12 more lines</code></pre>
-<p>You write:</p>
-<pre><code>for (int pin = 2; pin <= 13; pin++) {
-  digitalWrite(pin, HIGH);
-  delay(100);
-  digitalWrite(pin, LOW);
-}</code></pre>
-
-<h2>The for Loop</h2>
-<p>Best when you know how many times to repeat:</p>
-<pre><code>// for (initialize; condition; increment)
-for (int i = 0; i < 10; i++) {
-  Serial.println(i);    // Prints 0 through 9
-}</code></pre>
-
-<h2>The while Loop</h2>
-<p>Repeats while a condition is true. Good when you don't know the count:</p>
-<pre><code>int count = 0;
-while (count < 5) {
-  Serial.println(count);
-  count++;
-}</code></pre>
-
-<h2>The do-while Loop</h2>
-<p>Always runs at least ONCE, then checks the condition:</p>
-<pre><code>do {
-  Serial.println("This runs at least once!");
-} while (false);  // Condition checked AFTER first run</code></pre>
-
-<h2>break and continue</h2>
-<ul>
-  <li><code>break</code> — immediately exits the loop</li>
-  <li><code>continue</code> — skips rest of current iteration, goes to next</li>
-</ul>
-`,
-    code: `// ArduinoLearn – Lesson 9: Loops
-// LED chaser pattern with multiple loop types
-
-void setup() {
-  // for loop to set up 6 pins at once!
-  for (int pin = 2; pin <= 7; pin++) {
-    pinMode(pin, OUTPUT);
-  }
-  Serial.begin(9600);
-}
-
-void loop() {
-  // FOR loop: forward chase
-  Serial.println("==> Forward chase");
-  for (int pin = 2; pin <= 7; pin++) {
-    digitalWrite(pin, HIGH);
-    delay(80);
-    digitalWrite(pin, LOW);
-  }
-
-  // FOR loop: reverse chase
-  Serial.println("<== Reverse chase");
-  for (int pin = 7; pin >= 2; pin--) {
-    digitalWrite(pin, HIGH);
-    delay(80);
-    digitalWrite(pin, LOW);
-  }
-
-  // WHILE loop: flash all 3 times
-  Serial.println("*** Flash all ***");
-  int flashes = 0;
-  while (flashes < 3) {
-    for (int pin = 2; pin <= 7; pin++) digitalWrite(pin, HIGH);
-    delay(150);
-    for (int pin = 2; pin <= 7; pin++) digitalWrite(pin, LOW);
-    delay(150);
-    flashes++;
-  }
-
-  delay(300);
-}`,
-    challenge: {
-      desc: 'Write a for loop that prints the Fibonacci sequence (0, 1, 1, 2, 3, 5, 8, 13...) for the first 10 numbers to the Serial monitor.',
-      hint: 'Use two variables (a=0, b=1) and compute next = a + b; then a = b; b = next; in a loop.',
-      validate: (code, sim) => {
-        return code.includes('for') && (code.includes('fib') || code.includes('Fibonacci') || (code.includes('a') && code.includes('b') && code.includes('next')));
-      },
-    },
-    quiz: [
-      {
-        q: 'How many times does this run: for(int i=0; i<5; i++)?',
-        opts: ['4', '5', '6', 'Infinitely'],
-        correct: 1,
-        explain: 'i starts at 0 and increments while i < 5. So i = 0,1,2,3,4 — that\'s 5 iterations.',
-      },
-      {
-        q: 'What does "break" do inside a loop?',
-        opts: ['Pauses the loop for 1 second', 'Immediately exits the loop', 'Skips to the next iteration', 'Restarts the loop'],
-        correct: 1,
-        explain: 'break immediately terminates the current loop and continues execution after the loop\'s closing brace.',
-      },
-      {
-        q: 'What is guaranteed about a do-while loop?',
-        opts: ['It always runs infinitely', 'It runs at least once', 'It runs exactly 10 times', 'It runs 0 or more times'],
-        correct: 1,
-        explain: 'A do-while loop executes the body first, THEN checks the condition. This guarantees at least one execution.',
-      },
-    ],
-  },
-
-  // ── Lesson 10: Functions ─────────────────────────────
-  {
-    id: 'functions',
-    title: 'Functions — Organize Your Code',
-    icon: '⚙️',
-    difficulty: 'intermediate',
-    xp: 100,
-    desc: 'Write reusable functions with parameters and return values to structure clean code.',
-    theory: `
-<h2>What Are Functions?</h2>
-<p>Functions are named blocks of code you can call multiple times. They make code:</p>
-<ul>
-  <li><strong>Reusable</strong> — write once, use many times</li>
-  <li><strong>Readable</strong> — <code>blinkLED(3)</code> is clearer than 15 lines</li>
-  <li><strong>Testable</strong> — test each function independently</li>
-</ul>
-
-<h2>Function Syntax</h2>
-<pre><code>returnType functionName(parameters) {
-  // function body
-  return value;  // if returnType is not void
-}</code></pre>
-
-<h3>void functions (no return value)</h3>
-<pre><code>void blinkLED(int pin, int times) {
-  for (int i = 0; i < times; i++) {
-    digitalWrite(pin, HIGH);
-    delay(200);
-    digitalWrite(pin, LOW);
-    delay(200);
-  }
-}</code></pre>
-
-<h3>Functions that return a value</h3>
-<pre><code>// Returns the temperature in Celsius
-float getTemperature() {
-  int raw = analogRead(A0);
-  float voltage = raw * (5.0 / 1023.0);
-  return (voltage - 0.5) * 100;
-}
-
-// In loop():
-float temp = getTemperature();
-Serial.println(temp);</code></pre>
-
+        type: 'challenge', title: 'Challenge: Countdown!', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Use a <strong>for loop</strong> to count <em>DOWN</em> from 10 to 1, printing each number to Serial. After the loop, print <code>"BLAST OFF!"</code></p>
 <div class="info-box">
-  <strong>Rule of thumb:</strong> If you're copy-pasting code more than twice, make it a function!
-</div>
-
-<h2>Parameters vs Arguments</h2>
-<ul>
-  <li><strong>Parameters</strong> are variables in the function definition</li>
-  <li><strong>Arguments</strong> are the actual values you pass when calling</li>
-</ul>
-<pre><code>void blink(int times) { ... }  // "times" is a parameter
-blink(3);   // 3 is the argument</code></pre>
-`,
-    code: `// ArduinoLearn – Lesson 10: Functions
-
-const int LED_PIN = 13;
-
-// ── Custom functions ───────────────────
-
-// Blink LED n times at given speed
-void blinkLED(int pin, int times, int speed) {
-  for (int i = 0; i < times; i++) {
-    digitalWrite(pin, HIGH);
-    delay(speed);
-    digitalWrite(pin, LOW);
-    delay(speed);
-  }
-}
-
-// Check if a number is in range
-bool inRange(int val, int lo, int hi) {
-  return (val >= lo && val <= hi);
-}
-
-// Read "temperature" from A0 and return Celsius estimate
-float readTemp() {
-  int raw = analogRead(A0);
-  float voltage = raw * (5.0 / 1023.0);
-  return (voltage - 0.5) * 100.0;
-}
-
-// Print a separator line
-void printSeparator(char ch, int len) {
-  for (int i = 0; i < len; i++) {
-    Serial.print(ch);
-  }
-  Serial.println();
-}
-
-// ── Setup & Loop ───────────────────────
-
-void setup() {
-  pinMode(LED_PIN, OUTPUT);
+  Hint: start i at 10, keep going while <code>i >= 1</code>, and decrement with <code>i--</code>
+</div>`,
+        code: `void setup() {
   Serial.begin(9600);
-  printSeparator('=', 30);
-  Serial.println("  Functions Demo");
-  printSeparator('=', 30);
+
+  // Write your countdown for loop here!
+
+
 }
 
 void loop() {
-  float temp = readTemp();
-  Serial.print("Temperature: ");
-  Serial.print(temp, 1);
-  Serial.println("°C");
-
-  if (inRange(temp, 0, 20)) {
-    Serial.println("Cool — slow blink");
-    blinkLED(LED_PIN, 1, 500);
-  } else if (inRange(temp, 20, 35)) {
-    Serial.println("Warm — normal blink");
-    blinkLED(LED_PIN, 2, 250);
-  } else {
-    Serial.println("Hot! — rapid blink");
-    blinkLED(LED_PIN, 5, 100);
-  }
-
-  delay(500);
+  // Empty - our countdown runs once in setup
 }`,
-    challenge: {
-      desc: 'Write a function called "mapToPercent(int value)" that takes a 0-1023 value and returns a 0-100 int. Call it in loop() and print the result.',
-      hint: 'int mapToPercent(int value) { return map(value, 0, 1023, 0, 100); }',
-      validate: (code, sim) => {
-        return code.includes('mapToPercent') || (code.match(/int\s+\w+\s*\(\s*int\s+\w+\s*\)/));
+        validate: (code, _sim) => {
+          const hasFor = /\bfor\s*\(/.test(code);
+          const hasDecrement = /i--|i\s*-=\s*1|i\s*=\s*i\s*-\s*1/.test(code);
+          const hasBlastOff = /BLAST\s*OFF/.test(code);
+          const hasSerial = /Serial\.println/.test(code);
+          return hasFor && hasDecrement && hasBlastOff && hasSerial;
+        },
+        hint: 'for (int i = 10; i >= 1; i--) { Serial.println(i); }  Serial.println("BLAST OFF!");',
       },
-    },
-    quiz: [
       {
-        q: 'What does "void" mean in a function declaration?',
-        opts: ['The function is empty', 'The function does not return a value', 'The function is global', 'The function runs once'],
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'In this loop: for(int i = 0; i < 5; i++) — how many times does the body run?',
+        opts: ['4 times', '5 times', '6 times', 'Forever'],
         correct: 1,
-        explain: 'void means the function has no return value — it performs an action but doesn\'t give anything back to the caller.',
-      },
-      {
-        q: 'Where should custom functions usually be placed?',
-        opts: ['Inside the loop() function', 'Before setup()', 'After loop(), outside of it', 'Anywhere outside of setup and loop'],
-        correct: 3,
-        explain: 'Functions can be defined anywhere in the sketch outside of other functions. Many programmers put them after loop() for readability.',
-      },
-      {
-        q: 'What is the difference between a parameter and an argument?',
-        opts: ['They are the same thing', 'Parameters are in the definition; arguments are the values passed when calling', 'Arguments are global; parameters are local', 'Parameters are returned; arguments are received'],
-        correct: 1,
-        explain: 'Parameters are placeholders in the function definition. Arguments are the actual values you provide when calling the function.',
+        explain: 'i starts at 0 and runs while i < 5, so i = 0, 1, 2, 3, 4 — that\'s exactly 5 times!',
       },
     ],
   },
 
-  /* ══════════════════════════════════════════════════════
-     ADVANCED TRACK
-     ══════════════════════════════════════════════════════ */
-
-  // ── Lesson 11: Arrays ────────────────────────────────
+  // ── 10. Functions ────────────────────────────────────────
   {
-    id: 'arrays',
-    title: 'Arrays — Collections of Data',
-    icon: '📋',
-    difficulty: 'advanced',
-    xp: 125,
-    desc: 'Store and manipulate collections of values using arrays — essential for LED patterns and sensor averages.',
-    theory: `
-<h2>What Is an Array?</h2>
-<p>An array stores multiple values of the same type under one name, accessed by index. Think of it as a row of numbered boxes:</p>
-<pre><code>int scores[5];          // 5 empty int slots (indices 0–4)
-int leds[] = {2,3,4,5,6};  // Initialized with values</code></pre>
-
-<div class="info-box warn">
-  <strong>⚠️ Zero-indexed!</strong> The first element is at index 0, not 1. An array of size 5 has indices 0, 1, 2, 3, 4. Accessing index 5 is a bug!
-</div>
-
-<h2>Accessing Elements</h2>
-<pre><code>int ledPins[] = {2, 3, 4, 5};
-int first = ledPins[0];   // 2
-int last  = ledPins[3];   // 5
-
-ledPins[2] = 9;           // Change index 2 from 4 to 9</code></pre>
-
-<h2>Iterating with Loops</h2>
-<pre><code>int pins[] = {2, 3, 4, 5, 6};
-int numPins = 5;
-
-// Set all as output
-for (int i = 0; i < numPins; i++) {
-  pinMode(pins[i], OUTPUT);
-}</code></pre>
-
-<h2>2D Arrays</h2>
-<p>Arrays of arrays — great for LED matrix patterns:</p>
-<pre><code>int pattern[2][4] = {
-  {1, 0, 1, 0},  // row 0
-  {0, 1, 0, 1}   // row 1
-};</code></pre>
-
-<h2>Common Uses</h2>
+    id: 'functions', title: 'Writing Functions', icon: '🧩',
+    difficulty: 'advanced', xp: 80,
+    desc: 'Organize your code into reusable, named blocks.',
+    steps: [
+      {
+        type: 'learn', title: 'What are Functions?', icon: '🧩',
+        content: `
+<h2>Functions — Write Once, Use Anywhere</h2>
+<p>A <strong>function</strong> is a named block of code you can call whenever you need it. You already know two: <code>setup()</code> and <code>loop()</code>!</p>
+<p>Why write your own functions?</p>
 <ul>
-  <li>LED pin lists</li>
-  <li>Animation sequences</li>
-  <li>Rolling sensor averages</li>
-  <li>Lookup tables</li>
+  <li><strong>Don't repeat yourself</strong> — write the code once, call it 10 times</li>
+  <li><strong>Readable code</strong> — <code>blinkSOS()</code> is clearer than 15 raw lines</li>
+  <li><strong>Easy to fix</strong> — change the function in one place, fixed everywhere</li>
 </ul>
-`,
-    code: `// ArduinoLearn – Lesson 11: Arrays
-
-// Array of LED pins
-int ledPins[] = {2, 3, 4, 5, 6, 7};
-int numLEDs = 6;
-
-// Pattern sequences (1 = on, 0 = off)
-int patterns[][6] = {
-  {1, 0, 0, 0, 0, 1},  // Outer
-  {0, 1, 0, 0, 1, 0},  // Second
-  {0, 0, 1, 1, 0, 0},  // Center
-  {1, 1, 0, 0, 1, 1},  // Pairs
-  {1, 1, 1, 1, 1, 1},  // All on
-  {0, 0, 0, 0, 0, 0},  // All off
-};
-int numPatterns = 6;
-
-// Display a pattern from the 2D array
-void displayPattern(int patIndex) {
-  for (int i = 0; i < numLEDs; i++) {
-    digitalWrite(ledPins[i], patterns[patIndex][i]);
+<div class="info-box tip">
+  <strong>Syntax:</strong><br>
+  <code>void myFunction() { /* code */ }</code><br><br>
+  <code>int add(int a, int b) { return a + b; }</code><br>
+  (functions can take <strong>parameters</strong> as inputs and <strong>return</strong> values!)
+</div>
+<p><code>void</code> means the function returns nothing. Use <code>int</code>, <code>float</code>, etc. if it should return a value.</p>`,
+      },
+      {
+        type: 'run', title: 'Custom Functions in Action', icon: '▶',
+        content: `
+<h2>See How Clean Functions Make Code!</h2>
+<p>Click <strong>▶ Run</strong> to see custom functions at work. Notice how <code>loop()</code> becomes simple and readable!</p>`,
+        code: `// A function that blinks a pin N times at a speed
+void blinkTimes(int pin, int times, int speed) {
+  for (int i = 0; i < times; i++) {
+    digitalWrite(pin, HIGH); delay(speed);
+    digitalWrite(pin, LOW);  delay(speed);
   }
 }
 
-// Compute average of sensor readings
-int rollingAverage(int count) {
-  int readings[count];
-  for (int i = 0; i < count; i++) {
-    readings[i] = analogRead(A0);
-    delay(10);
-  }
-  int sum = 0;
-  for (int i = 0; i < count; i++) sum += readings[i];
-  return sum / count;
+// A function that returns a value
+int readPercent() {
+  int raw = analogRead(A0);
+  return map(raw, 0, 1023, 0, 100);
 }
 
 void setup() {
-  for (int i = 0; i < numLEDs; i++) {
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Functions demo!");
+}
+
+void loop() {
+  Serial.println("3 fast blinks...");
+  blinkTimes(13, 3, 100);
+
+  Serial.println("2 slow blinks...");
+  blinkTimes(13, 2, 500);
+
+  int pct = readPercent();
+  Serial.print("A0 level: ");
+  Serial.print(pct);
+  Serial.println("%");
+
+  delay(1000);
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Write a Function', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Write a function called <code>flashSOS()</code> that blinks pin 13 quickly <strong>3 times</strong>. Then call it from <code>loop()</code>.</p>
+<div class="info-box">
+  Your code must have:<br>
+  • <code>void flashSOS()</code> function definition<br>
+  • <code>flashSOS()</code> called inside loop()<br>
+  • At least 3 <code>digitalWrite</code> calls inside the function
+</div>`,
+        code: `// Define flashSOS() here!
+
+
+void setup() {
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Call your function here
+
+  delay(1000);
+}`,
+        validate: (code, _sim) => {
+          const hasFunc = /void\s+flashSOS\s*\(\s*\)/.test(code);
+          const callsFunc = (code.replace(/void\s+flashSOS[^}]*\}/, '')).includes('flashSOS()');
+          const hasDigital = (code.match(/digitalWrite/g) || []).length >= 3;
+          return hasFunc && callsFunc && hasDigital;
+        },
+        hint: 'void flashSOS() { for (int i = 0; i < 3; i++) { digitalWrite(13, HIGH); delay(150); digitalWrite(13, LOW); delay(150); } }',
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'What does "void" mean in "void myFunction()"?',
+        opts: [
+          'The function is empty (no code)',
+          'The function returns no value',
+          'The function only runs once',
+          'The function takes no parameters',
+        ],
+        correct: 1,
+        explain: '"void" means the function doesn\'t return a value. If it returned an integer, you\'d write "int myFunction()" instead.',
+      },
+    ],
+  },
+
+  // ── 11. Arrays ───────────────────────────────────────────
+  {
+    id: 'arrays', title: 'Arrays', icon: '📋',
+    difficulty: 'advanced', xp: 80,
+    desc: 'Store multiple values in a single variable.',
+    steps: [
+      {
+        type: 'learn', title: 'What are Arrays?', icon: '📋',
+        content: `
+<h2>Arrays — Lists of Values Under One Name</h2>
+<p>What if you want to control 5 LEDs? You <em>could</em> create 5 variables... or use an <strong>array</strong>!</p>
+<p>An array stores multiple values of the same type under one name:</p>
+<pre><code>int ledPins[] = {2, 3, 4, 5, 6};
+//               ^  ^  ^  ^  ^
+//         index: 0  1  2  3  4</code></pre>
+<div class="info-box">
+  Access by index: <code>ledPins[0]</code> → 2 &nbsp;|&nbsp; <code>ledPins[2]</code> → 4<br><br>
+  <strong>⚠️ Arrays always start at index 0, not 1!</strong>
+</div>
+<p>To get the number of elements:</p>
+<pre><code>int len = sizeof(ledPins) / sizeof(ledPins[0]);</code></pre>
+<p>Combine arrays with <code>for</code> loops to process all elements at once!</p>`,
+      },
+      {
+        type: 'run', title: 'Arrays + Loops = Power!', icon: '▶',
+        content: `
+<h2>Control Many Pins with One Loop!</h2>
+<p>This sketch uses an array to manage multiple pins. Notice how the setup and loop code stays short even though it handles many pins — that's the power of arrays!</p>
+<p>Click <strong>▶ Run</strong> and watch the Serial Monitor!</p>`,
+        code: `int ledPins[] = {2, 3, 4, 5, 6};
+int numLeds = 5;
+
+void setup() {
+  // Set ALL pins as output with one loop!
+  for (int i = 0; i < numLeds; i++) {
     pinMode(ledPins[i], OUTPUT);
   }
   Serial.begin(9600);
-  Serial.println("Array patterns demo!");
+  Serial.println("Array demo — turning LEDs on one at a time");
 }
 
 void loop() {
-  for (int p = 0; p < numPatterns; p++) {
-    Serial.print("Pattern ");
-    Serial.println(p + 1);
-    displayPattern(p);
-    delay(400);
+  for (int i = 0; i < numLeds; i++) {
+    Serial.print("LED on pin ");
+    Serial.print(ledPins[i]);
+    Serial.println(" ON");
+    digitalWrite(ledPins[i], HIGH);
+    delay(200);
+    digitalWrite(ledPins[i], LOW);
   }
-
-  int avg = rollingAverage(5);
-  Serial.print("Sensor avg (5 samples): ");
-  Serial.println(avg);
+  Serial.println("--- Round complete ---");
+  delay(500);
 }`,
-    challenge: {
-      desc: 'Create an array of 5 sensor readings from A0, then find and print the maximum value in the array.',
-      hint: 'Store 5 analogRead(A0) values in an array, then loop through them keeping track of the largest value seen.',
-      validate: (code, sim) => {
-        return code.includes('[5]') || (code.includes('[]') && code.includes('max'));
-      },
-    },
-    quiz: [
-      {
-        q: 'int arr[5] — what are the valid indices?',
-        opts: ['1, 2, 3, 4, 5', '0, 1, 2, 3, 4', '0, 1, 2, 3, 4, 5', '-2, -1, 0, 1, 2'],
-        correct: 1,
-        explain: 'Arrays are zero-indexed. int arr[5] has elements at indices 0, 1, 2, 3, and 4. Index 5 does NOT exist — accessing it is a bug.',
       },
       {
-        q: 'How do you get the size of "int arr[] = {1,2,3,4};"?',
-        opts: ['arr.length()', 'sizeof(arr) / sizeof(arr[0])', 'arr.size', 'length(arr)'],
-        correct: 1,
-        explain: 'In C++, sizeof(arr)/sizeof(arr[0]) gives the element count. sizeof(arr) returns bytes; sizeof(arr[0]) returns bytes per element.',
+        type: 'challenge', title: 'Challenge: Array of Messages', icon: '🎯',
+        content: `
+<h2>🎯 Your Challenge</h2>
+<p>Create a <code>String</code> array with at least <strong>3 messages</strong>, then loop through and print each one to Serial.</p>
+<div class="info-box">
+  Example: <code>String msgs[] = {"Hello", "World", "Arduino"};</code><br><br>
+  Checker needs: an array declaration, a for loop, and Serial.println
+</div>`,
+        code: `void setup() {
+  Serial.begin(9600);
+
+  // Create your String array and loop through it here!
+
+
+}
+
+void loop() {
+  // Empty
+}`,
+        validate: (code, _sim) => {
+          const hasArray = /String\s+\w+\s*\[/.test(code) || /\w+\s+\w+\s*\[\s*\]\s*=\s*\{/.test(code);
+          const hasFor = /\bfor\s*\(/.test(code);
+          const hasSerial = /Serial\.println/.test(code);
+          return hasArray && hasFor && hasSerial;
+        },
+        hint: 'String messages[] = {"Hello", "Arduino", "World"}; for (int i = 0; i < 3; i++) { Serial.println(messages[i]); }',
       },
       {
-        q: 'What does a 2D array look like conceptually?',
-        opts: ['A single long list', 'A table with rows and columns', 'A circular buffer', 'A linked list'],
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'In this array: int nums[] = {10, 20, 30} — what is nums[1]?',
+        opts: ['10', '20', '30', 'Error — index out of range'],
         correct: 1,
-        explain: 'A 2D array is like a grid or table — accessed by two indices: row and column (e.g., arr[row][col]).',
+        explain: 'Arrays are zero-indexed! nums[0]=10, nums[1]=20, nums[2]=30. The first element is always at index 0.',
       },
     ],
   },
 
-  // ── Lesson 12: millis() ──────────────────────────────
+  // ── 12. millis ───────────────────────────────────────────
   {
-    id: 'millis',
-    title: 'Timing with millis() — Non-blocking Code',
-    icon: '⏱️',
-    difficulty: 'advanced',
-    xp: 150,
-    desc: 'Ditch blocking delays and write responsive, multi-tasking Arduino code using millis().',
-    theory: `
-<h2>The Problem with delay()</h2>
-<p><code>delay()</code> completely freezes your Arduino. While it's waiting, it can't read buttons, update displays, or do anything else. For simple blink sketches this is fine — for real projects, it's a disaster.</p>
-
+    id: 'millis', title: 'Non-Blocking Timing with millis()', icon: '⏱️',
+    difficulty: 'advanced', xp: 100,
+    desc: 'Do multiple things at once — without freezing with delay().',
+    steps: [
+      {
+        type: 'learn', title: 'The Problem with delay()', icon: '⏳',
+        content: `
+<h2>delay() Freezes Everything</h2>
+<p>When you use <code>delay(1000)</code>, your Arduino <strong>completely stops</strong> for 1 second. It can't read buttons, update displays, or do anything else during that time!</p>
 <div class="info-box warn">
-  <strong>⚠️ Think of delay() like this:</strong> You're cooking and need to wait 3 minutes. Instead of standing still staring at the pot, you could be doing the dishes, setting the table... delay() is the "staring at the pot" approach.
+  ⚠️ Imagine a car dashboard that freezes for 1 second every time it updates the speedometer. You couldn't steer during that second — dangerous!
 </div>
-
-<h2>millis() — Your Non-blocking Timer</h2>
-<p><code>millis()</code> returns the number of milliseconds since the Arduino started (resets to 0 after ~49 days). Instead of waiting, you check if enough time has passed:</p>
-
+<p>For simple blink sketches, <code>delay()</code> is perfectly fine. But for real projects where you need to:</p>
+<ul>
+  <li>Blink an LED AND read a button at the same time</li>
+  <li>Run multiple timers at different speeds</li>
+  <li>Stay responsive to user input while doing other work</li>
+</ul>
+<p>...you need <strong>millis()</strong>!</p>`,
+      },
+      {
+        type: 'learn', title: 'The millis() Pattern', icon: '⏱️',
+        content: `
+<h2>millis() — Check Time, Don't Wait for It</h2>
+<p><code>millis()</code> returns how many milliseconds have passed since the Arduino powered on. It keeps counting forever!</p>
+<p>The pattern — instead of WAITING, you CHECK if enough time has passed:</p>
 <pre><code>unsigned long previousTime = 0;
-const long interval = 1000;
+const int INTERVAL = 1000;
 
 void loop() {
-  unsigned long currentTime = millis();
+  unsigned long now = millis();
 
-  if (currentTime - previousTime >= interval) {
-    previousTime = currentTime;  // Save the last event time
-    // Do the thing!
-    digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+  if (now - previousTime >= INTERVAL) {
+    previousTime = now;   // Reset the clock
+    // Do your timed action here!
   }
-  // Arduino is FREE to do other work here!
+  // Everything else runs at FULL SPEED
 }</code></pre>
-
-<h2>Why unsigned long?</h2>
-<p>millis() returns an <code>unsigned long</code> — a 32-bit number that counts up to ~4 billion. Always use <code>unsigned long</code> for millis() variables to avoid overflow bugs.</p>
-
-<h2>Multiple Independent Timers</h2>
-<p>The real power: run multiple timers simultaneously — something impossible with delay():</p>
-<pre><code>unsigned long timerA = 0, timerB = 0;
-// LED A blinks every 500ms, LED B every 1300ms
-// Both work independently!</code></pre>
-`,
-    code: `// ArduinoLearn – Lesson 12: millis() Non-blocking Timing
-// Two LEDs blinking at different speeds simultaneously!
-
-const int LED_A = 13;   // Blinks every 400ms
-const int LED_B = 12;   // Blinks every 1100ms
-
-unsigned long prevA = 0;
-unsigned long prevB = 0;
-
-const unsigned long INTERVAL_A = 400;
-const unsigned long INTERVAL_B = 1100;
-
-// Track states
-bool stateA = false;
-bool stateB = false;
+<p>This way, your loop keeps running — checking conditions, reading sensors — while also watching for timer events!</p>`,
+        code: `unsigned long prevBlink  = 0;
+unsigned long prevSensor = 0;
+bool ledState = false;
 
 void setup() {
-  pinMode(LED_A, OUTPUT);
-  pinMode(LED_B, OUTPUT);
+  pinMode(13, OUTPUT);
   Serial.begin(9600);
-  Serial.println("Non-blocking dual blink! (impossible with delay!)");
 }
 
 void loop() {
   unsigned long now = millis();
 
-  // ── Timer A (400ms) ──────────────────
-  if (now - prevA >= INTERVAL_A) {
-    prevA = now;
-    stateA = !stateA;
-    digitalWrite(LED_A, stateA);
-    Serial.print("A ");
-    Serial.println(stateA ? "ON" : "off");
+  // Blink every 500ms
+  if (now - prevBlink >= 500) {
+    prevBlink = now;
+    ledState = !ledState;
+    digitalWrite(13, ledState ? HIGH : LOW);
+    Serial.println(ledState ? "LED ON" : "LED OFF");
   }
 
-  // ── Timer B (1100ms) ─────────────────
-  if (now - prevB >= INTERVAL_B) {
-    prevB = now;
-    stateB = !stateB;
-    digitalWrite(LED_B, stateB);
-    Serial.print("         B ");
-    Serial.println(stateB ? "ON" : "off");
+  // Print sensor every 2000ms
+  if (now - prevSensor >= 2000) {
+    prevSensor = now;
+    Serial.print("Sensor: ");
+    Serial.println(analogRead(A0));
   }
-
-  // Arduino is FREE here — could read buttons, sensors, etc.!
 }`,
-    challenge: {
-      desc: 'Add a third timer that reads A0 every 2 seconds and prints the value — all without interfering with the two blinking LEDs.',
-      hint: 'Add "unsigned long prevSensor = 0;" and a similar if-block with 2000ms interval that calls analogRead(A0).',
-      validate: (code, sim) => {
-        const timerCount = (code.match(/millis\(\)/g) || []).length;
-        return timerCount >= 2 && code.includes('analogRead');
-      },
-    },
-    quiz: [
-      {
-        q: 'Why use "unsigned long" for millis() variables?',
-        opts: ['It\'s faster', 'millis() returns a large number that can overflow a regular int', 'unsigned long is required by the function', 'For compatibility with float'],
-        correct: 1,
-        explain: 'millis() can return up to ~4 billion. A regular int only holds up to 32767, causing overflow. unsigned long holds up to ~4.3 billion.',
       },
       {
+        type: 'run', title: 'Two Timers at Once!', icon: '▶',
+        content: `
+<h2>Non-Blocking Magic!</h2>
+<p>Click <strong>▶ Run</strong> to see TWO independent timers running at the same time — the LED blinks every 500ms AND the sensor reads every 1500ms!</p>
+<div class="info-box tip">
+  💡 With delay() you could only do <em>one</em> thing at a time. With millis(), you can do <em>many</em>!
+</div>`,
+        code: `unsigned long prevBlink  = 0;
+unsigned long prevReport = 0;
+bool ledState = false;
+
+void setup() {
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Two independent timers!");
+}
+
+void loop() {
+  unsigned long now = millis();
+
+  // Timer 1: Blink every 500ms
+  if (now - prevBlink >= 500) {
+    prevBlink = now;
+    ledState = !ledState;
+    digitalWrite(13, ledState ? HIGH : LOW);
+  }
+
+  // Timer 2: Report every 1500ms
+  if (now - prevReport >= 1500) {
+    prevReport = now;
+    Serial.print("Time: ");
+    Serial.print(now / 1000);
+    Serial.print("s  LED: ");
+    Serial.println(ledState ? "ON" : "off");
+  }
+}`,
+      },
+      {
+        type: 'challenge', title: 'Final Challenge: millis() Timer', icon: '🎯',
+        content: `
+<h2>🎯 Final Challenge!</h2>
+<p>Write a sketch using <code>millis()</code> (not <code>delay()</code>!) that blinks pin 13 every <strong>300ms</strong>.</p>
+<div class="info-box">
+  Your code must use:<br>
+  • <code>unsigned long</code> variable for the previous time<br>
+  • <code>millis()</code> to get current time<br>
+  • <code>digitalWrite(13, ...)</code> to control the LED<br>
+  • <strong>No</strong> <code>delay()</code> calls!
+</div>`,
+        code: `unsigned long previousMillis = 0;
+bool ledOn = false;
+
+void setup() {
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Use millis() to blink without delay!
+
+}`,
+        validate: (code, _sim) => {
+          const hasMillis  = /millis\s*\(\s*\)/.test(code);
+          const hasULong   = /unsigned\s+long/.test(code);
+          const hasDigital = /digitalWrite\s*\(\s*13/.test(code);
+          const noDelay    = !/\bdelay\s*\(/.test(code);
+          return hasMillis && hasULong && hasDigital && noDelay;
+        },
+        hint: 'if (millis() - previousMillis >= 300) { previousMillis = millis(); ledOn = !ledOn; digitalWrite(13, ledOn ? HIGH : LOW); }',
+      },
+      {
+        type: 'quiz', title: 'Final Quiz', icon: '❓',
+        content: '',
         q: 'What is the main advantage of millis() over delay()?',
-        opts: ['millis() is more accurate', 'millis() doesn\'t block other code from running', 'millis() uses less power', 'millis() works with floats'],
+        opts: [
+          'millis() is more precise than delay()',
+          'millis() lets the rest of loop() keep running while "waiting"',
+          'millis() uses less memory than delay()',
+          'millis() works on more Arduino models',
+        ],
         correct: 1,
-        explain: 'delay() blocks ALL code execution. millis() lets you check elapsed time without stopping anything — your code remains responsive.',
-      },
-      {
-        q: 'How often does millis() reset to 0?',
-        opts: ['Every second', 'Every minute', 'After about 49 days', 'Never'],
-        correct: 2,
-        explain: 'millis() uses an unsigned long, which overflows (wraps to 0) after 2^32 milliseconds ≈ 49.7 days. The subtraction trick (now - prev) handles this correctly.',
+        explain: 'millis() is non-blocking — your program keeps running. delay() freezes everything. That\'s the key difference!',
       },
     ],
   },
@@ -1389,7 +1384,6 @@ const REFERENCE = [
     entries: [
       { sig: 'analogRead(pin)',              desc: 'Read analog pin (A0–A5), returns 0–1023' },
       { sig: 'analogWrite(pin, value)',      desc: 'Write PWM to a ~pin, value 0–255' },
-      { sig: 'analogReference(type)',        desc: 'Set voltage reference for analogRead' },
     ],
   },
   {
@@ -1454,7 +1448,7 @@ const PROJECTS = [
   {
     icon: '🚦',
     title: 'Traffic Light Controller',
-    desc: 'Create a full traffic light sequence with red, yellow, and green LEDs. Add a pedestrian button that triggers a walk signal using interrupt handling.',
+    desc: 'Create a full traffic light sequence with red, yellow, and green LEDs. Add a pedestrian button that triggers a walk signal.',
     parts: ['Arduino Uno', '3x LEDs (R/Y/G)', '3x 220Ω resistors', 'Pushbutton', 'Breadboard'],
     difficulty: 'beginner',
     skills: ['digitalWrite', 'delay', 'digitalRead'],
@@ -1470,7 +1464,7 @@ const PROJECTS = [
   {
     icon: '🤖',
     title: 'Servo Robot Arm',
-    desc: 'Control a servo motor with a potentiometer. Map the pot position (0–1023) to the servo angle (0–180°). Add multiple servos for a full arm.',
+    desc: 'Control a servo motor with a potentiometer. Map the pot position (0–1023) to servo angle (0–180°).',
     parts: ['Arduino Uno', 'Servo motor', 'Potentiometer', 'External 5V power supply'],
     difficulty: 'intermediate',
     skills: ['Servo library', 'map()', 'analogRead'],
@@ -1478,15 +1472,15 @@ const PROJECTS = [
   {
     icon: '📏',
     title: 'Ultrasonic Range Finder',
-    desc: 'Measure distances using an HC-SR04 ultrasonic sensor. Display the distance in cm, trigger an LED alert when objects are too close.',
+    desc: 'Measure distances using an HC-SR04 sensor. Display the distance in cm and trigger an LED when objects are too close.',
     parts: ['Arduino Uno', 'HC-SR04 sensor', '1x LED', '220Ω resistor', 'Breadboard'],
     difficulty: 'intermediate',
     skills: ['pulseIn()', 'millis()', 'if/else'],
   },
   {
     icon: '🌈',
-    title: 'RGB LED Controller',
-    desc: 'Control an RGB LED to display any color. Use three potentiometers for R, G, B channels, or auto-cycle through colors with a rainbow effect.',
+    title: 'RGB LED Color Mixer',
+    desc: 'Control an RGB LED to display any color using three potentiometers for R, G, B channels, or auto-cycle through a rainbow.',
     parts: ['Arduino Uno', 'RGB LED (common cathode)', '3x 220Ω resistors', '3x potentiometers'],
     difficulty: 'advanced',
     skills: ['analogWrite', 'PWM', 'map()', 'Arrays'],

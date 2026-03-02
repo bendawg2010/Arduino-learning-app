@@ -1,5 +1,6 @@
 /* ─────────────────────────────────────────────────────────
    app.js  –  Main application controller for ArduinoLearn.
+              Step-based guided lesson flow.
    ───────────────────────────────────────────────────────── */
 
 // ── State ──────────────────────────────────────────────────
@@ -10,10 +11,13 @@ const DEFAULT_STATE = {
   serialUsed: false, pwmUsed: false,
 };
 let STATE = loadState();
-let board = null;
+let board  = null;
 let editor = null;
-let currentLesson = null;
-let challengeAttempts = 0;
+let currentLesson    = null;
+let currentStepIdx   = 0;
+let stepChallengePassed = false;
+let stepQuizAnswered    = false;
+let challengeAttempts   = 0;
 
 function loadState() {
   try {
@@ -65,13 +69,11 @@ function updateXPBar() {
   }
 }
 
-// Floating "+50 XP" pop
 function showXPPop(amount) {
   const pop = document.createElement('div');
   pop.className = 'xp-pop';
   pop.textContent = `+${amount} XP`;
   document.body.appendChild(pop);
-  // position near xp bar
   const bar = document.getElementById('xp-fill');
   if (bar) {
     const r = bar.getBoundingClientRect();
@@ -122,7 +124,6 @@ function showLevelUpToast(lvl) {
 
 // ── Navigation ──────────────────────────────────────────────
 async function navigate(screen, lessonId) {
-  // Stop board if leaving a lesson
   if (board && board.isRunning()) await board.stop();
 
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -151,7 +152,7 @@ function populateSidebar() {
   ['beginner', 'intermediate', 'advanced'].forEach(diff => {
     const container = document.getElementById(`nav-${diff}`);
     if (!container) return;
-    container.innerHTML = ''; // clear before repopulating
+    container.innerHTML = '';
     LESSONS.filter(l => l.difficulty === diff).forEach(lesson => {
       const div = document.createElement('div');
       const done = STATE.completedLessons.includes(lesson.id);
@@ -175,8 +176,8 @@ function renderHome() {
   return `
   <div class="dash-hero">
     <h1>Welcome to <span>ArduinoLearn</span> ⚡</h1>
-    <p>Interactive lessons, a live simulator, quizzes &amp; hands-on challenges.
-       Go from zero to Arduino hero!</p>
+    <p>Step-by-step guided lessons, a live simulator, quizzes &amp; hands-on challenges.
+       Go from zero to Arduino hero — one concept at a time!</p>
     <div class="hero-btns">
       <button class="btn-primary" onclick="navigate('lesson','${next.id}')">
         ${done === 0 ? '🚀 Start Learning' : '▶ Continue Learning'}
@@ -221,7 +222,7 @@ function renderHome() {
 
 function lessonCard(lesson) {
   const done  = STATE.completedLessons.includes(lesson.id);
-  const score = STATE.quizScores[lesson.id];
+  const steps = lesson.steps ? lesson.steps.length : 0;
   return `
   <div class="lesson-card ${done ? 'completed' : ''}" onclick="navigate('lesson','${lesson.id}')">
     <div class="lesson-card-icon">${lesson.icon}</div>
@@ -230,16 +231,20 @@ function lessonCard(lesson) {
     <div class="lesson-card-meta">
       <span class="diff-badge ${lesson.difficulty}">${lesson.difficulty}</span>
       <span class="xp-badge"><span>+${lesson.xp}</span> XP</span>
-      ${score !== undefined ? `<span style="color:var(--yellow);font-size:.72rem">Quiz: ${score}%</span>` : ''}
+      <span style="color:var(--text3);font-size:.72rem">${steps} steps</span>
     </div>
   </div>`;
 }
 
-// ── Lesson Screen ────────────────────────────────────────────
+// ── Lesson Screen (step-based) ────────────────────────────
 function renderLesson(lessonId) {
   currentLesson = LESSONS.find(l => l.id === lessonId);
   if (!currentLesson) return navigate('home');
-  challengeAttempts = 0;
+
+  currentStepIdx      = 0;
+  stepChallengePassed = false;
+  stepQuizAnswered    = false;
+  challengeAttempts   = 0;
 
   const idx  = LESSONS.indexOf(currentLesson);
   const prev = LESSONS[idx - 1];
@@ -263,48 +268,23 @@ function renderLesson(lessonId) {
       <div class="lesson-nav-btns">
         ${prev ? `<button onclick="navigate('lesson','${prev.id}')">← Prev</button>` : ''}
         <button onclick="navigate('home')">🏠 Home</button>
-        ${nxt  ? `<button onclick="navigate('lesson','${nxt.id}')">Next →</button>` : ''}
+        ${nxt  ? `<button onclick="navigate('lesson','${nxt.id}')">Next Lesson →</button>` : ''}
       </div>
     </div>
 
-    <!-- Left panel -->
-    <div class="theory-panel">
-      <div class="panel-tabs">
-        <div class="panel-tab active" id="tab-theory"    onclick="switchTab('theory')">📖 Theory</div>
-        <div class="panel-tab"        id="tab-challenge" onclick="switchTab('challenge')">🎯 Challenge</div>
-        <div class="panel-tab quiz-tab-btn"              onclick="openQuiz()">❓ Quiz</div>
-      </div>
-      <div class="panel-content" id="panel-content">
-        <div id="theory-pane" class="theory-content">${currentLesson.theory}</div>
-        <div id="challenge-pane" class="hidden">
-          <div class="challenge-box">
-            <h3>🎯 Your Challenge</h3>
-            <p>${currentLesson.challenge.desc}</p>
-            <button class="btn-primary" id="check-btn-inner" onclick="checkChallenge()" style="margin-top:10px">
-              ✔ Check My Code
-            </button>
-            <div class="challenge-hint" style="margin-top:10px">
-              <span class="text-dim">Stuck?&nbsp;</span>
-              <button onclick="showHint()" style="color:var(--yellow);text-decoration:underline;font-size:.82rem">Show hint</button>
-            </div>
-            <div id="hint-box" class="info-box hidden" style="margin-top:10px"></div>
-            <div class="challenge-result" id="challenge-result"></div>
-          </div>
-        </div>
-      </div>
+    <!-- Left panel: guided step content -->
+    <div class="theory-panel" id="step-panel">
+      <div id="step-area" style="display:flex;flex-direction:column;height:100%"></div>
     </div>
 
-    <!-- Right panel -->
+    <!-- Right panel: editor + simulator -->
     <div class="editor-panel">
       <div class="editor-toolbar">
         <span class="toolbar-title">sketch.ino&nbsp;<span style="color:var(--text3);font-weight:400;font-size:.72rem">(Ctrl+Enter = Run)</span></span>
-        <button class="run-btn"       id="run-btn"   onclick="toggleRun()">▶ Run</button>
-        <button class="check-btn"                    onclick="checkChallenge()">✔ Check</button>
-        <button class="quiz-btn"                     onclick="openQuiz()">❓ Quiz</button>
-        <button class="reset-code-btn"               onclick="resetCode()">↺ Reset</button>
+        <button class="run-btn" id="run-btn" onclick="toggleRun()">▶ Run</button>
+        <button class="reset-code-btn" onclick="resetCode()">↺ Reset</button>
       </div>
       <div class="editor-cm-wrap" id="editor-wrap"></div>
-
       <div class="sim-panel">
         <div class="sim-header">
           <strong>Simulator</strong>
@@ -317,11 +297,14 @@ function renderLesson(lessonId) {
     </div>
   </div>`;
 
-  // Init CodeMirror
+  // Pick first step with code for initial editor value
+  const firstCode = currentLesson.steps.find(s => s.code)?.code ||
+    '// Your code here\n\nvoid setup() {\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  // ...\n}';
+
   const wrap = document.getElementById('editor-wrap');
   if (typeof CodeMirror !== 'undefined') {
     editor = CodeMirror(wrap, {
-      value:        currentLesson.code,
+      value:        firstCode,
       mode:         'text/x-c++src',
       theme:        'dracula',
       lineNumbers:  true,
@@ -330,41 +313,278 @@ function renderLesson(lessonId) {
       autofocus:    true,
       extraKeys: { 'Ctrl-Enter': toggleRun, 'Cmd-Enter': toggleRun },
     });
-    // Refresh once rendered so height is correct
     setTimeout(() => { editor.setSize('100%', '100%'); editor.refresh(); }, 60);
   } else {
-    // Fallback textarea if CDN failed
     wrap.innerHTML = `<textarea id="editor-fallback"
       style="width:100%;height:100%;background:#1e1e2e;color:#cdd6f4;font-family:monospace;
              font-size:13px;padding:12px;border:none;resize:none;outline:none;
-             line-height:1.6;tab-size:2">${currentLesson.code}</textarea>`;
+             line-height:1.6;tab-size:2">${firstCode}</textarea>`;
     editor = {
       getValue: () => document.getElementById('editor-fallback').value,
       setValue: (v) => { document.getElementById('editor-fallback').value = v; },
-      setSize:  () => {},
-      refresh:  () => {},
+      setSize: () => {}, refresh: () => {},
     };
   }
 
-  // Init simulator board
   board = new ArduinoBoard(document.getElementById('sim-body'));
+  renderStep();
 }
 
-function switchTab(tab) {
-  document.getElementById('tab-theory')?.classList.toggle('active', tab === 'theory');
-  document.getElementById('tab-challenge')?.classList.toggle('active', tab === 'challenge');
-  document.getElementById('theory-pane')?.classList.toggle('hidden', tab !== 'theory');
-  document.getElementById('challenge-pane')?.classList.toggle('hidden', tab !== 'challenge');
+// ── Step Renderer ─────────────────────────────────────────
+function renderStep() {
+  if (!currentLesson) return;
+  const step  = currentLesson.steps[currentStepIdx];
+  const total = currentLesson.steps.length;
+  const isFirst = currentStepIdx === 0;
+  const isLast  = currentStepIdx === total - 1;
+  const alreadyDone = STATE.completedLessons.includes(currentLesson.id);
+
+  // Determine if Next should be locked
+  let nextLocked = false;
+  if (!alreadyDone) {
+    if (step.type === 'challenge' && !stepChallengePassed) nextLocked = true;
+    if (step.type === 'quiz'      && !stepQuizAnswered)    nextLocked = true;
+  }
+
+  // Update editor only if this step has code
+  if (step.code && editor) {
+    editor.setValue(step.code);
+  }
+
+  // Build progress dots
+  const stepTypeIcons = { learn: '📖', run: '▶', modify: '✏️', challenge: '🎯', quiz: '❓' };
+  const dots = currentLesson.steps.map((s, i) => {
+    const cls = i < currentStepIdx ? 'done' : i === currentStepIdx ? 'current' : '';
+    return `<div class="step-dot ${cls}" title="${s.title || ''}"></div>`;
+  }).join('');
+
+  // Build step body HTML
+  let bodyHTML = step.content || '';
+
+  if (step.type === 'challenge') {
+    bodyHTML += `
+      <div class="challenge-box" style="margin-top:16px">
+        <div class="challenge-result" id="step-challenge-result"></div>
+        <button class="btn-primary" id="step-check-btn" onclick="checkStepChallenge()" style="margin-top:8px;width:100%">
+          ✔ Check My Code
+        </button>
+        <div style="margin-top:10px">
+          <button onclick="showStepHint()" style="color:var(--yellow);font-size:.8rem;text-decoration:underline;cursor:pointer">
+            💡 Show Hint
+          </button>
+          <div id="step-hint-box" class="info-box hidden" style="margin-top:8px"></div>
+        </div>
+      </div>`;
+  }
+
+  if (step.type === 'quiz') {
+    const letters = ['A', 'B', 'C', 'D'];
+    bodyHTML += `
+      <div id="step-quiz-area" style="margin-top:16px">
+        <div class="quiz-q">${step.q}</div>
+        <div class="quiz-opts" id="step-quiz-opts">
+          ${step.opts.map((opt, i) => `
+            <div class="quiz-opt" data-idx="${i}">
+              <div class="quiz-opt-letter">${letters[i]}</div>
+              <span>${opt}</span>
+            </div>`).join('')}
+        </div>
+        <div id="step-quiz-explain" class="quiz-explanation hidden"></div>
+      </div>`;
+  }
+
+  const area = document.getElementById('step-area');
+  area.innerHTML = `
+    <div class="step-progress">${dots}</div>
+    <div class="step-header">
+      <span class="step-type-icon">${step.icon || stepTypeIcons[step.type] || '📄'}</span>
+      <div>
+        <div class="step-counter">Step ${currentStepIdx + 1} of ${total}</div>
+        <div class="step-title">${step.title}</div>
+      </div>
+    </div>
+    <div class="step-body theory-content">${bodyHTML}</div>
+    <div class="step-nav-btns">
+      <button class="btn-secondary step-back-btn" ${isFirst ? 'disabled' : ''} onclick="goPrevStep()">← Back</button>
+      <button class="btn-primary step-next-btn" id="step-next-btn" ${nextLocked ? 'disabled' : ''} onclick="goNextStep()">
+        ${isLast ? '🎉 Finish Lesson!' : 'Next →'}
+      </button>
+    </div>`;
+
+  // Attach quiz listeners after DOM is updated
+  if (step.type === 'quiz') {
+    document.querySelectorAll('#step-quiz-opts .quiz-opt').forEach(el => {
+      el.addEventListener('click', () => handleStepQuiz(el, step));
+    });
+  }
 }
 
-function showHint() {
-  const box = document.getElementById('hint-box');
-  if (!box || !currentLesson) return;
-  box.textContent = '💡 ' + currentLesson.challenge.hint;
+// ── Step Navigation ───────────────────────────────────────
+function goNextStep() {
+  if (!currentLesson) return;
+  const total = currentLesson.steps.length;
+  if (currentStepIdx >= total - 1) {
+    completeLesson();
+    return;
+  }
+  currentStepIdx++;
+  stepChallengePassed = false;
+  stepQuizAnswered    = false;
+  renderStep();
+}
+
+function goPrevStep() {
+  if (currentStepIdx <= 0) return;
+  currentStepIdx--;
+  stepChallengePassed = false;
+  stepQuizAnswered    = false;
+  renderStep();
+}
+
+// ── Challenge Handler ─────────────────────────────────────
+async function checkStepChallenge() {
+  if (!currentLesson || !editor || !board) return;
+  const step = currentLesson.steps[currentStepIdx];
+  if (!step || !step.validate) return;
+
+  const resultEl = document.getElementById('step-challenge-result');
+  const btnEl    = document.getElementById('step-check-btn');
+  if (!resultEl) return;
+
+  resultEl.className = 'challenge-result';
+  resultEl.innerHTML = '<span style="color:var(--text3)">⏳ Checking…</span>';
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Checking…'; }
+
+  const code = editor.getValue();
+  if (board.isRunning()) await board.stop();
+  await board.runForCheck(code);
+
+  if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✔ Check My Code'; }
+
+  const simState = board.getState();
+  let passed = false;
+  try { passed = step.validate(code, simState); } catch(_) {}
+
+  challengeAttempts++;
+  resultEl.className = 'challenge-result ' + (passed ? 'pass' : 'fail');
+
+  if (passed) {
+    resultEl.innerHTML = '🎉 Challenge complete! Click <strong>Next</strong> to continue.';
+    stepChallengePassed = true;
+
+    STATE.challengesPassed++;
+    if (challengeAttempts === 1) STATE.firstTryPasses++;
+    if (simState.serialUsed) { STATE.serialUsed = true; }
+    if (simState.pwmUsed)    { STATE.pwmUsed    = true; }
+    saveState();
+    checkAchievements();
+    launchConfetti();
+
+    const nextBtn = document.getElementById('step-next-btn');
+    if (nextBtn) nextBtn.disabled = false;
+  } else {
+    resultEl.innerHTML = '❌ Not quite — check the hint or re-read the step above!';
+  }
+}
+
+function showStepHint() {
+  const step = currentLesson?.steps[currentStepIdx];
+  const box  = document.getElementById('step-hint-box');
+  if (!box || !step?.hint) return;
+  box.textContent = '💡 ' + step.hint;
   box.classList.remove('hidden');
 }
 
-// ── Free Code Playground ─────────────────────────────────────
+// ── Quiz Handler ──────────────────────────────────────────
+function handleStepQuiz(el, step) {
+  if (stepQuizAnswered) return;
+  stepQuizAnswered = true;
+
+  const chosen = parseInt(el.dataset.idx);
+  document.querySelectorAll('#step-quiz-opts .quiz-opt').forEach((o, i) => {
+    o.classList.add('disabled');
+    if (i === step.correct) o.classList.add('correct');
+    else if (i === chosen)  o.classList.add('wrong');
+  });
+
+  const explain = document.getElementById('step-quiz-explain');
+  if (explain) {
+    explain.textContent = (chosen === step.correct ? '✅ Correct! ' : '❌ ') + step.explain;
+    explain.classList.remove('hidden');
+  }
+
+  // Track quiz score and award bonus XP for correct answer
+  if (chosen === step.correct) {
+    const prev = STATE.quizScores[currentLesson.id] || 0;
+    STATE.quizScores[currentLesson.id] = Math.max(prev, 100);
+    saveState();
+    addXP(5);
+    checkAchievements();
+  }
+
+  const nextBtn = document.getElementById('step-next-btn');
+  if (nextBtn) nextBtn.disabled = false;
+}
+
+// ── Lesson Completion ─────────────────────────────────────
+function completeLesson() {
+  const alreadyDone = STATE.completedLessons.includes(currentLesson.id);
+
+  if (!alreadyDone) {
+    STATE.completedLessons.push(currentLesson.id);
+    saveState();
+    addXP(currentLesson.xp);
+    updateSidebarChecks();
+    checkAchievements();
+    launchConfetti();
+  }
+
+  const idx        = LESSONS.indexOf(currentLesson);
+  const nextLesson = LESSONS[idx + 1];
+
+  showModal(
+    alreadyDone ? `✅ Lesson Reviewed!` : `🎉 Lesson Complete!`,
+    `<div style="text-align:center;padding:20px 0">
+      <div style="font-size:3.5rem">${currentLesson.icon}</div>
+      <h2 style="margin:12px 0 6px;font-size:1.3rem">${currentLesson.title}</h2>
+      ${alreadyDone
+        ? `<p style="color:var(--text3)">You've already completed this lesson. Great review!</p>`
+        : `<p style="color:var(--green);font-weight:600;font-size:1.1rem">+${currentLesson.xp} XP earned!</p>
+           <p style="color:var(--text3);margin-top:6px">Outstanding work! Keep it up! 💪</p>`
+      }
+    </div>`,
+    `${nextLesson
+      ? `<button class="btn-primary" onclick="closeModal();navigate('lesson','${nextLesson.id}')">
+           Next: ${nextLesson.title} →
+         </button>`
+      : `<button class="btn-primary" onclick="closeModal();navigate('achievements')">🏆 View Achievements</button>`}
+     <button class="btn-secondary" onclick="closeModal();navigate('home')">🏠 Dashboard</button>`
+  );
+}
+
+// ── Reset Code ────────────────────────────────────────────
+function resetCode() {
+  if (!currentLesson || !editor) return;
+  if (board) board.stop();
+  const step = currentLesson.steps[currentStepIdx];
+  const code = step?.code || currentLesson.steps.find(s => s.code)?.code || '';
+  if (code) editor.setValue(code);
+}
+
+function updateSidebarChecks() {
+  document.querySelectorAll('.nav-item[data-lesson]').forEach(el => {
+    const done = STATE.completedLessons.includes(el.dataset.lesson);
+    let check = el.querySelector('.nav-check');
+    if (done && !check) {
+      check = document.createElement('span');
+      check.className = 'nav-check';
+      check.textContent = '✓';
+      el.appendChild(check);
+    }
+  });
+}
+
+// ── Free Code Playground ─────────────────────────────────
 function renderPlayground() {
   currentLesson = null;
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -381,13 +601,13 @@ function renderPlayground() {
     <div class="theory-panel">
       <div class="panel-tabs"><div class="panel-tab active">📋 Snippets</div></div>
       <div class="panel-content">
-        <p style="color:var(--text3);font-size:.85rem;margin-bottom:12px">Click a snippet to load it:</p>
+        <p style="color:var(--text3);font-size:.85rem;margin-bottom:12px">Click a snippet to load it into the editor:</p>
         ${[
-          ['💡 Blink',      'void setup(){pinMode(13,OUTPUT);Serial.begin(9600);}\nvoid loop(){digitalWrite(13,HIGH);Serial.println("ON");delay(500);digitalWrite(13,LOW);Serial.println("OFF");delay(500);}'],
-          ['📡 Serial',     'void setup(){Serial.begin(9600);Serial.println("Hello World!");}\nvoid loop(){Serial.print("Uptime: ");Serial.print(millis()/1000.0,1);Serial.println("s");delay(1000);}'],
-          ['🌈 PWM Fade',   'void setup(){pinMode(9,OUTPUT);}\nvoid loop(){for(int b=0;b<=255;b+=5){analogWrite(9,b);delay(15);}for(int b=255;b>=0;b-=5){analogWrite(9,b);delay(15);}}'],
-          ['🎛️ Analog Read','void setup(){Serial.begin(9600);}\nvoid loop(){int v=analogRead(A0);int p=map(v,0,1023,0,100);Serial.print("A0=");Serial.print(v);Serial.print(" (");Serial.print(p);Serial.println("%)");delay(500);}'],
-          ['⏱️ millis()',   'unsigned long prev=0;\nvoid setup(){Serial.begin(9600);}\nvoid loop(){unsigned long now=millis();if(now-prev>=1000){prev=now;Serial.print("Second: ");Serial.println(now/1000);}}'],
+          ['💡 Blink',       'void setup(){pinMode(13,OUTPUT);Serial.begin(9600);}\nvoid loop(){digitalWrite(13,HIGH);Serial.println("ON");delay(500);digitalWrite(13,LOW);Serial.println("OFF");delay(500);}'],
+          ['📡 Serial',      'void setup(){Serial.begin(9600);Serial.println("Hello World!");}\nvoid loop(){Serial.print("Uptime: ");Serial.print(millis()/1000.0,1);Serial.println("s");delay(1000);}'],
+          ['🌈 PWM Fade',    'void setup(){pinMode(9,OUTPUT);}\nvoid loop(){for(int b=0;b<=255;b+=5){analogWrite(9,b);delay(15);}for(int b=255;b>=0;b-=5){analogWrite(9,b);delay(15);}}'],
+          ['🎛️ Analog Read', 'void setup(){Serial.begin(9600);}\nvoid loop(){int v=analogRead(A0);int p=map(v,0,1023,0,100);Serial.print("A0=");Serial.print(v);Serial.print(" (");Serial.print(p);Serial.println("%)");delay(500);}'],
+          ['⏱️ millis()',    'unsigned long prev=0;\nvoid setup(){Serial.begin(9600);}\nvoid loop(){unsigned long now=millis();if(now-prev>=1000){prev=now;Serial.print("Second: ");Serial.println(now/1000);}}'],
         ].map(([name, code]) => `
           <div class="snippet-chip" onclick='loadSnippet(${JSON.stringify(code)})'>${name}</div>
         `).join('')}
@@ -417,8 +637,7 @@ function renderPlayground() {
   const wrap = document.getElementById('editor-wrap');
   if (typeof CodeMirror !== 'undefined') {
     editor = CodeMirror(wrap, {
-      value: STARTER,
-      mode: 'text/x-c++src', theme: 'dracula',
+      value: STARTER, mode: 'text/x-c++src', theme: 'dracula',
       lineNumbers: true, indentWithTabs: false, tabSize: 2, autofocus: true,
       extraKeys: { 'Ctrl-Enter': toggleRun, 'Cmd-Enter': toggleRun },
     });
@@ -428,21 +647,19 @@ function renderPlayground() {
     editor = {
       getValue: () => document.getElementById('editor-fallback').value,
       setValue: (v) => { document.getElementById('editor-fallback').value = v; },
-      setSize: ()=>{}, refresh: ()=>{},
+      setSize: () => {}, refresh: () => {},
     };
   }
   board = new ArduinoBoard(document.getElementById('sim-body'));
 }
 
-window.loadSnippet = (code) => {
-  if (editor) editor.setValue(code);
-};
+window.loadSnippet = (code) => { if (editor) editor.setValue(code); };
 window.resetPlayground = () => {
   if (editor) editor.setValue('// Your code here\n\nvoid setup() {\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  // ...\n}');
   if (board) board.stop();
 };
 
-// ── Run / Stop ────────────────────────────────────────────────
+// ── Run / Stop ────────────────────────────────────────────
 async function toggleRun() {
   if (!board || !editor) return;
   const btn = document.getElementById('run-btn');
@@ -461,79 +678,7 @@ async function toggleRun() {
   }
 }
 
-function resetCode() {
-  if (!currentLesson || !editor) return;
-  if (board) board.stop();
-  editor.setValue(currentLesson.code);
-  const res = document.getElementById('challenge-result');
-  if (res) { res.className = 'challenge-result'; res.innerHTML = ''; }
-}
-
-// ── Challenge checking ────────────────────────────────────────
-async function checkChallenge() {
-  if (!currentLesson || !editor || !board) return;
-  switchTab('challenge');
-
-  const resultEl = document.getElementById('challenge-result');
-  const btnEl    = document.getElementById('check-btn-inner');
-  if (!resultEl) return;
-
-  // Show checking state
-  resultEl.className = 'challenge-result';
-  resultEl.innerHTML = '<span style="color:var(--text3)">⏳ Checking…</span>';
-  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Checking…'; }
-
-  const code = editor.getValue();
-
-  // Stop any running sketch, then do a fast validation run
-  if (board.isRunning()) await board.stop();
-  await board.runForCheck(code);
-
-  // Re-enable button
-  if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✔ Check My Code'; }
-
-  const state = board.getState();
-  let passed = false;
-  try {
-    passed = currentLesson.challenge.validate(code, state);
-  } catch(e) {
-    passed = false;
-  }
-
-  challengeAttempts++;
-  resultEl.className = 'challenge-result ' + (passed ? 'pass' : 'fail');
-
-  if (passed) {
-    resultEl.innerHTML = '🎉 Challenge complete! Great work!';
-    if (!STATE.completedLessons.includes(currentLesson.id)) {
-      STATE.completedLessons.push(currentLesson.id);
-      STATE.challengesPassed++;
-      if (challengeAttempts === 1) STATE.firstTryPasses++;
-      addXP(currentLesson.xp);
-      updateSidebarChecks();
-    }
-    saveState();
-    checkAchievements();
-    launchConfetti();
-  } else {
-    resultEl.innerHTML = '❌ Not quite — check the hint below for guidance!';
-  }
-}
-
-function updateSidebarChecks() {
-  document.querySelectorAll('.nav-item[data-lesson]').forEach(el => {
-    const done = STATE.completedLessons.includes(el.dataset.lesson);
-    let check = el.querySelector('.nav-check');
-    if (done && !check) {
-      check = document.createElement('span');
-      check.className = 'nav-check';
-      check.textContent = '✓';
-      el.appendChild(check);
-    }
-  });
-}
-
-// Minimal confetti burst
+// ── Confetti ──────────────────────────────────────────────
 function launchConfetti() {
   const colors = ['#58a6ff','#3fb950','#ffd700','#bc8cff','#f0883e'];
   for (let i = 0; i < 40; i++) {
@@ -547,106 +692,7 @@ function launchConfetti() {
   }
 }
 
-// ── Quiz ───────────────────────────────────────────────────────
-function openQuiz() {
-  if (!currentLesson) return;
-  const questions = currentLesson.quiz;
-  if (!questions?.length) {
-    showModal('No Quiz', '<p>No quiz available for this lesson yet.</p>', '<button class="btn-secondary" onclick="closeModal()">Close</button>');
-    return;
-  }
-
-  let qIdx = 0, score = 0;
-
-  function renderQ() {
-    const q = questions[qIdx];
-    const letters = ['A','B','C','D'];
-    document.getElementById('modal-body').innerHTML = `
-      <div class="quiz-progress">
-        ${questions.map((_,i) => `<div class="quiz-dot ${i<qIdx?'done':i===qIdx?'current':''}"></div>`).join('')}
-      </div>
-      <div style="font-size:.75rem;color:var(--text3);margin-bottom:10px">
-        Question ${qIdx+1} of ${questions.length}
-      </div>
-      <div class="quiz-q">${q.q}</div>
-      <div class="quiz-opts" id="quiz-opts">
-        ${q.opts.map((opt,i) => `
-          <div class="quiz-opt" data-idx="${i}">
-            <div class="quiz-opt-letter">${letters[i]}</div>
-            <span>${opt}</span>
-          </div>`).join('')}
-      </div>
-      <div id="quiz-explain" class="quiz-explanation hidden"></div>
-    `;
-    document.getElementById('modal-foot').innerHTML = '';
-
-    // Attach listeners (no global scope pollution)
-    document.querySelectorAll('.quiz-opt').forEach(el => {
-      el.addEventListener('click', () => handleAnswer(q, parseInt(el.dataset.idx)));
-    });
-  }
-
-  function handleAnswer(q, chosen) {
-    const opts    = document.querySelectorAll('.quiz-opt');
-    const explain = document.getElementById('quiz-explain');
-    opts.forEach((el, i) => {
-      el.classList.add('disabled');
-      if (i === q.correct) el.classList.add('correct');
-      else if (i === chosen) el.classList.add('wrong');
-    });
-    if (chosen === q.correct) {
-      score++;
-      explain.textContent = '✅ Correct! ' + q.explain;
-    } else {
-      explain.textContent = '❌ ' + q.explain;
-    }
-    explain.classList.remove('hidden');
-
-    const isLast = qIdx >= questions.length - 1;
-    document.getElementById('modal-foot').innerHTML = `
-      <button class="btn-primary" id="quiz-next-btn">${isLast ? '🏁 See Results' : 'Next →'}</button>
-    `;
-    document.getElementById('quiz-next-btn').addEventListener('click', () => {
-      qIdx++;
-      if (qIdx < questions.length) renderQ();
-      else showResults();
-    });
-  }
-
-  function showResults() {
-    const pct   = Math.round(score / questions.length * 100);
-    const msgs  = ['Keep studying! 💪','Getting there! 📚','Good work! 👍','Excellent! 🌟','Perfect! 🏆'];
-    const xpEarned = Math.round(currentLesson.xp * 0.5 * (pct / 100));
-
-    const prev = STATE.quizScores[currentLesson.id];
-    if (prev === undefined || pct > prev) {
-      STATE.quizScores[currentLesson.id] = pct;
-      saveState();
-    }
-    if (xpEarned > 0) addXP(xpEarned);
-    checkAchievements();
-
-    const emoji = pct === 100 ? '🏆' : pct >= 67 ? '🌟' : pct >= 33 ? '👍' : '💪';
-    document.getElementById('modal-body').innerHTML = `
-      <div class="quiz-score-wrap">
-        <div style="font-size:3rem">${emoji}</div>
-        <div class="quiz-score-num">${score}/${questions.length}</div>
-        <div class="quiz-score-sub">${pct}% Correct</div>
-        <div class="quiz-score-msg">${msgs[Math.min(Math.floor(pct/25), 4)]}</div>
-        ${xpEarned>0 ? `<div style="margin-top:14px;color:var(--yellow);font-weight:600">+${xpEarned} XP earned!</div>` : ''}
-      </div>`;
-    document.getElementById('modal-foot').innerHTML = `
-      <button class="btn-secondary" onclick="closeModal()">Close</button>
-      <button class="btn-primary" onclick="closeModal()">Back to Lesson</button>
-    `;
-    if (pct === 100) launchConfetti();
-  }
-
-  showModal(`❓ Quiz — ${currentLesson.title}`, '', '');
-  renderQ();
-}
-
-// ── Reference ─────────────────────────────────────────────────
+// ── Reference ─────────────────────────────────────────────
 function renderReference() {
   const colorMap = { blue:'var(--blue)', green:'var(--green)', orange:'var(--orange)',
                      purple:'var(--purple)', teal:'var(--teal)', yellow:'var(--yellow)' };
@@ -668,7 +714,7 @@ function renderReference() {
   </div>`;
 }
 
-// ── Achievements ─────────────────────────────────────────────
+// ── Achievements ─────────────────────────────────────────
 function renderAchievements() {
   const earned = STATE.achievements.length;
   return `
@@ -691,7 +737,7 @@ function renderAchievements() {
   </div>`;
 }
 
-// ── Projects ──────────────────────────────────────────────────
+// ── Projects ──────────────────────────────────────────────
 function renderProjects() {
   return `
   <div class="page-header">
@@ -715,7 +761,7 @@ function renderProjects() {
   </div>`;
 }
 
-// ── Modal ──────────────────────────────────────────────────────
+// ── Modal ──────────────────────────────────────────────────
 function showModal(title, body, foot) {
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-body').innerHTML    = body;
@@ -726,7 +772,7 @@ function closeModal() {
   document.getElementById('modal-bg').classList.add('hidden');
 }
 
-// ── Reset ─────────────────────────────────────────────────────
+// ── Reset ─────────────────────────────────────────────────
 function confirmReset() {
   showModal('Reset Progress',
     `<p>Reset <strong style="color:var(--red)">all progress</strong>?
@@ -738,7 +784,6 @@ function doReset() {
   STATE = { ...DEFAULT_STATE };
   saveState();
   closeModal();
-  // Clear nav groups so populateSidebar doesn't double-add
   ['beginner','intermediate','advanced'].forEach(d => {
     const c = document.getElementById(`nav-${d}`);
     if (c) c.innerHTML = '';
@@ -748,7 +793,7 @@ function doReset() {
   navigate('home');
 }
 
-// ── Sidebar toggle ────────────────────────────────────────────
+// ── Sidebar toggle ────────────────────────────────────────
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   const content = document.getElementById('content');
@@ -756,19 +801,19 @@ function toggleSidebar() {
   content.classList.toggle('full', collapsed);
 }
 
-// ── Bootstrap ─────────────────────────────────────────────────
+// ── Bootstrap ─────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Expose globals needed by inline onclick handlers
-  window.navigate       = navigate;
-  window.toggleRun      = toggleRun;
-  window.resetCode      = resetCode;
-  window.checkChallenge = checkChallenge;
-  window.openQuiz       = openQuiz;
-  window.switchTab      = switchTab;
-  window.showHint       = showHint;
-  window.closeModal     = closeModal;
-  window.confirmReset   = confirmReset;
-  window.doReset        = doReset;
+  // Expose globals for onclick handlers
+  window.navigate            = navigate;
+  window.toggleRun           = toggleRun;
+  window.resetCode           = resetCode;
+  window.checkStepChallenge  = checkStepChallenge;
+  window.showStepHint        = showStepHint;
+  window.goNextStep          = goNextStep;
+  window.goPrevStep          = goPrevStep;
+  window.closeModal          = closeModal;
+  window.confirmReset        = confirmReset;
+  window.doReset             = doReset;
 
   document.getElementById('ham-btn').addEventListener('click', toggleSidebar);
   document.getElementById('modal-close').addEventListener('click', closeModal);
@@ -777,7 +822,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('reset-btn').addEventListener('click', confirmReset);
 
-  // Static nav items (home, ref, ach, projects, playground)
   document.querySelectorAll('.nav-item[data-screen]').forEach(el => {
     el.addEventListener('click', () => navigate(el.dataset.screen));
   });
