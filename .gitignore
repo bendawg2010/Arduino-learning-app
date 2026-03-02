@@ -1,0 +1,6 @@
+node_modules/
+dist/
+electron/node_modules/
+electron/standalone.html
+electron/package-lock.json
+*.zip

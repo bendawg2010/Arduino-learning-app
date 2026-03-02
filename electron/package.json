@@ -1,0 +1,12 @@
+{
+  "name": "arduinolearn",
+  "productName": "ArduinoLearn",
+  "version": "1.0.0",
+  "description": "Interactive step-by-step Arduino coding lessons with a live simulator.",
+  "main": "main.js",
+  "author": "ArduinoLearn",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^40.6.1"
+  }
+}
