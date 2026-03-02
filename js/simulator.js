@@ -1,6 +1,7 @@
 /* ─────────────────────────────────────────────────────────
    simulator.js  –  Arduino → JS transpiler + execution
                     engine + visual board renderer.
+                    Supports: buttons, servos, buzzers, RGB LEDs.
    ───────────────────────────────────────────────────────── */
 
 // ── Transpiler ─────────────────────────────────────────────
@@ -10,6 +11,9 @@ class ArduinoTranspiler {
 
     // Strip preprocessor directives
     js = js.replace(/^\s*#(include|define|pragma|ifndef|endif|ifdef)[^\n]*/gm, '');
+
+    // Servo library: "Servo myServo;" → "let myServo = sim.createServo();"
+    js = js.replace(/\bServo\s+(\w+)\s*;/g, 'let $1 = sim.createServo();');
 
     // Unsigned / fixed-width types → let placeholder
     js = js.replace(/\bunsigned\s+(long|int|char|short)\b/g, 'let ___T');
@@ -93,7 +97,6 @@ class ArduinoTranspiler {
     js = js.replace(/\bceil\s*\(/g,  'Math.ceil(');
 
     // Strip type annotations from function parameters
-    // e.g. "async function blink(int pin, int times)" → "async function blink(pin, times)"
     js = js.replace(/(async\s+function\s+\w+\s*\()([^)]*)\)/g, (_, head, params) => {
       const cleaned = params.replace(/\b(?:unsigned\s+)?(?:int|float|double|long|bool|boolean|byte|char|word|String)\s+(\w)/g, '$1');
       return head + cleaned + ')';
@@ -107,7 +110,6 @@ class ArduinoTranspiler {
       if (m[1] !== '_setup' && m[1] !== '_loop') userFuncs.add(m[1]);
     }
     userFuncs.forEach(name => {
-      // Don't re-add await if already present
       const re = new RegExp(`(?<!await\\s{0,20})(?<!async\\s+function\\s+)\\b${name}\\s*\\(`, 'g');
       js = js.replace(re, `await ${name}(`);
     });
@@ -121,7 +123,7 @@ class SimObject {
   constructor(board, fastMode = false) {
     this._board   = board;
     this.running  = false;
-    this.fastMode = fastMode;            // fast = no real delays (for challenge check)
+    this.fastMode = fastMode;
     this._startMs = Date.now();
     this._maxLoops = fastMode ? 60 : 16; // 16 visual loops, 60 fast validation loops
     this._loopCount = 0;
@@ -153,17 +155,28 @@ class SimObject {
     return 0;
   }
   async digitalRead(pin) {
-    return this._board.getDigitalInput(pin);
+    return this._board.getDigital(pin);
+  }
+
+  // ── Servo library ─────────────────────────────────────
+  createServo() {
+    const board = this._board;
+    const srv = {
+      _pin: null,
+      attach(pin) { this._pin = pin; board.servoAttach(pin); },
+      write(angle) { board.setServoAngle(this._pin, angle); },
+      read() { return board._servoAngles[this._pin] || 0; },
+    };
+    return srv;
   }
 
   // ── Timing ───────────────────────────────────────────
   async delay(ms) {
     if (!this.running) throw new Error('STOPPED');
     if (this.fastMode) {
-      // yield to event loop but don't wait
       await new Promise(r => setTimeout(r, 1));
     } else {
-      ms = Math.min(+ms || 0, 1500); // cap real delays at 1500ms so large delays are visible
+      ms = Math.min(+ms || 0, 1500); // cap at 1500ms so longer delays are still visible
       await new Promise(r => setTimeout(r, ms));
     }
     if (!this.running) throw new Error('STOPPED');
@@ -201,24 +214,33 @@ class SimObject {
     if (b === undefined) return Math.floor(Math.random() * a);
     return Math.floor(Math.random() * (b - a)) + a;
   }
-  sq(x)     { return x * x; }
+  sq(x) { return x * x; }
+
+  // ── Audio ─────────────────────────────────────────────
   tone(pin, freq, dur) {
+    this._board.showBuzzerActive(pin, freq, true);
     if (!this.fastMode)
       this._board.appendSerial(`♪ tone(pin${pin}, ${freq}Hz${dur ? ', ' + dur + 'ms' : ''})`, 'info');
   }
-  noTone() {}
+  noTone(pin) {
+    this._board.showBuzzerActive(pin, 0, false);
+  }
 }
 
 // ── ArduinoBoard — visual board + runner ──────────────────
 class ArduinoBoard {
-  constructor(containerEl) {
-    this._el        = containerEl;
-    this._pins      = {};
-    this._analog    = [512, 512, 512, 512, 512, 512];
-    this._serialBuf = '';
-    this._btnState  = {}; // pin → 0 (released) or 1 (pressed)
-    this.sim        = null;
-    this._running   = false;
+  constructor(containerEl, components = []) {
+    this._el           = containerEl;
+    this._pins         = {};
+    this._analog       = [512, 512, 512, 512, 512, 512];
+    this._serialBuf    = '';
+    this.sim           = null;
+    this._running      = false;
+    this._components   = components;
+    this._buttonStates = {};   // pin → bool (true = pressed)
+    this._servoAngles  = {};   // pin → degrees 0-180
+    this._buzzers      = {};   // pin → {active, freq}
+    this._lastError    = null;
     this._render();
   }
 
@@ -237,16 +259,11 @@ class ArduinoBoard {
           <div class="pin-row-label">Digital Pins</div>
           <div class="pin-row" id="sim-pin-row">
             ${[2,3,4,5,6,7,8,9,10,11,12].map(p => `
-              <div class="pin-item" id="sim-pin-item-${p}" title="Pin ${p}${[3,5,6,9,10,11].includes(p) ? ' (PWM~)' : ''}">
+              <div class="pin-item" title="Pin ${p}${[3,5,6,9,10,11].includes(p) ? ' (PWM~)' : ''}">
                 <div class="pin-led" id="sim-pin-${p}"></div>
                 <div class="pin-num">${p}${[3,5,6,9,10,11].includes(p) ? '~' : ''}</div>
               </div>`).join('')}
           </div>
-        </div>
-
-        <div id="sim-btn-row-wrap" style="display:none">
-          <div class="pin-row-label">Digital Inputs — hold button to press</div>
-          <div class="btn-input-row" id="sim-btn-row"></div>
         </div>
 
         <div>
@@ -264,6 +281,8 @@ class ArduinoBoard {
               </div>`).join('')}
           </div>
         </div>
+
+        <div id="sim-components" class="sim-components"></div>
       </div>
 
       <div class="serial-monitor">
@@ -278,63 +297,168 @@ class ArduinoBoard {
       </div>
     `;
     window._board = this;
+    this._renderComponents();
   }
 
-  // ── Interactive button helpers ────────────────────────
-  _showButtonForPin(pin) {
-    const wrap = document.getElementById('sim-btn-row-wrap');
-    const row  = document.getElementById('sim-btn-row');
-    if (!wrap || !row) return;
-    // Only add if not already present
-    if (document.getElementById(`sim-btn-${pin}`)) return;
+  // ── Component rendering ───────────────────────────────
+  _renderComponents() {
+    if (!this._components || this._components.length === 0) return;
+    const el = document.getElementById('sim-components');
+    if (!el) return;
 
-    const isPullup = this._pins[pin] && this._pins[pin].mode === '"INPUT_PULLUP"';
-    const div = document.createElement('div');
-    div.className = 'btn-input-item';
-    div.id = `sim-btn-${pin}`;
-    div.innerHTML = `
-      <button class="sim-pushbtn" id="sim-pushbtn-${pin}"
-        onmousedown="window._board&&window._board.pressBtn(${pin},true)"
-        onmouseup="window._board&&window._board.pressBtn(${pin},false)"
-        ontouchstart="window._board&&window._board.pressBtn(${pin},true);event.preventDefault()"
-        ontouchend="window._board&&window._board.pressBtn(${pin},false)">
-        Hold
-      </button>
-      <div class="btn-pin-label">Pin ${pin}<br><span id="sim-btn-state-${pin}" class="btn-state-lbl">${isPullup ? 'HIGH' : 'LOW'}</span></div>
-    `;
-    row.appendChild(div);
-    wrap.style.display = '';
-    // init state: INPUT_PULLUP → reads HIGH (1) by default; INPUT → LOW (0)
-    this._btnState[pin] = isPullup ? 1 : 0;
+    let html = '<div class="sim-comp-label">Hardware Components</div><div class="sim-comp-row">';
+
+    this._components.forEach(comp => {
+      if (comp.type === 'button') {
+        html += `
+          <div class="comp-item">
+            <div class="comp-button" data-pin="${comp.pin}"
+              onmousedown="if(window._board)window._board.setButtonPress(${comp.pin},true)"
+              onmouseup="if(window._board)window._board.setButtonPress(${comp.pin},false)"
+              onmouseleave="if(window._board)window._board.setButtonPress(${comp.pin},false)"
+              ontouchstart="event.preventDefault();if(window._board)window._board.setButtonPress(${comp.pin},true)"
+              ontouchend="event.preventDefault();if(window._board)window._board.setButtonPress(${comp.pin},false)">
+              <div class="btn-cap">PUSH</div>
+            </div>
+            <div class="comp-label">Button · Pin ${comp.pin}</div>
+          </div>`;
+      } else if (comp.type === 'servo') {
+        html += `
+          <div class="comp-item">
+            <div class="comp-servo" data-pin="${comp.pin}">
+              <div class="servo-body">
+                <div class="servo-hub"></div>
+                <div class="servo-arm" id="servo-arm-${comp.pin}"></div>
+              </div>
+              <div class="servo-angle" id="servo-angle-${comp.pin}">0°</div>
+            </div>
+            <div class="comp-label">Servo · Pin ${comp.pin}</div>
+          </div>`;
+      } else if (comp.type === 'buzzer') {
+        html += `
+          <div class="comp-item">
+            <div class="comp-buzzer" data-pin="${comp.pin}" id="buzzer-${comp.pin}">
+              <div class="buzzer-icon">🔊</div>
+              <div class="buzzer-freq" id="buzzer-freq-${comp.pin}">—</div>
+            </div>
+            <div class="comp-label">Buzzer · Pin ${comp.pin}</div>
+          </div>`;
+      } else if (comp.type === 'rgb') {
+        const {r, g, b} = comp.pins;
+        html += `
+          <div class="comp-item">
+            <div class="comp-rgb-led" id="rgb-led-comp">
+              <div class="rgb-circle" id="rgb-circle" style="background:rgb(0,0,0)"></div>
+              <div class="rgb-vals">
+                <span id="rgb-r-val">R:0</span>
+                <span id="rgb-g-val">G:0</span>
+                <span id="rgb-b-val">B:0</span>
+              </div>
+            </div>
+            <div class="comp-label">RGB LED · R:${r} G:${g} B:${b}</div>
+          </div>`;
+        // Store pin mapping for RGB updates
+        this._rgbPins = {r, g, b};
+      }
+    });
+
+    html += '</div>';
+    el.innerHTML = html;
   }
 
-  pressBtn(pin, down) {
-    const isPullup = this._pins[pin] && this._pins[pin].mode === '"INPUT_PULLUP"';
-    // With INPUT_PULLUP: pressing connects to GND → reads LOW (0)
-    // With INPUT: pressing sends 5V → reads HIGH (1)
-    this._btnState[pin] = isPullup ? (down ? 0 : 1) : (down ? 1 : 0);
-    const lbl = document.getElementById(`sim-btn-state-${pin}`);
-    if (lbl) lbl.textContent = this._btnState[pin] ? 'HIGH' : 'LOW';
-    const btn = document.getElementById(`sim-pushbtn-${pin}`);
-    if (btn) btn.classList.toggle('pressed', down);
+  // ── Button control ────────────────────────────────────
+  setButtonPress(pin, pressed) {
+    this._buttonStates[pin] = pressed;
+    const el = document.querySelector(`.comp-button[data-pin="${pin}"]`);
+    if (el) el.classList.toggle('pressed', pressed);
   }
 
-  _clearButtons() {
-    this._btnState = {};
-    const wrap = document.getElementById('sim-btn-row-wrap');
-    const row  = document.getElementById('sim-btn-row');
-    if (wrap) wrap.style.display = 'none';
-    if (row)  row.innerHTML = '';
+  // ── Servo control ─────────────────────────────────────
+  servoAttach(pin) {
+    this._servoAngles[pin] = 0;
+    this._updateServoEl(pin);
+  }
+
+  setServoAngle(pin, angle) {
+    if (pin === null || pin === undefined) return;
+    angle = Math.max(0, Math.min(180, Math.round(+angle || 0)));
+    this._servoAngles[pin] = angle;
+    this._updateServoEl(pin);
+  }
+
+  _updateServoEl(pin) {
+    const arm = document.getElementById(`servo-arm-${pin}`);
+    if (arm) {
+      const angle = this._servoAngles[pin] || 0;
+      arm.style.transform = `rotate(${angle - 90}deg)`;
+    }
+    const lbl = document.getElementById(`servo-angle-${pin}`);
+    if (lbl) lbl.textContent = `${this._servoAngles[pin] || 0}°`;
+  }
+
+  // ── Buzzer control ────────────────────────────────────
+  showBuzzerActive(pin, freq, active) {
+    const el = document.getElementById(`buzzer-${pin}`);
+    if (el) el.classList.toggle('active', active);
+    const lbl = document.getElementById(`buzzer-freq-${pin}`);
+    if (lbl) lbl.textContent = active ? `${freq} Hz` : '—';
+  }
+
+  // ── RGB LED control ───────────────────────────────────
+  _updateRGBLed() {
+    if (!this._rgbPins) return;
+    const r = this._pins[this._rgbPins.r]?.pwm ?? 0;
+    const g = this._pins[this._rgbPins.g]?.pwm ?? 0;
+    const b = this._pins[this._rgbPins.b]?.pwm ?? 0;
+    const circle = document.getElementById('rgb-circle');
+    if (circle) circle.style.backgroundColor = `rgb(${r},${g},${b})`;
+    const rv = document.getElementById('rgb-r-val');
+    const gv = document.getElementById('rgb-g-val');
+    const bv = document.getElementById('rgb-b-val');
+    if (rv) rv.textContent = `R:${r}`;
+    if (gv) gv.textContent = `G:${g}`;
+    if (bv) bv.textContent = `B:${b}`;
   }
 
   // ── Pin state ─────────────────────────────────────────
   setPinMode(pin, mode) {
     this._pins[pin] = this._pins[pin] || {};
     this._pins[pin].mode = mode;
-    // If this is an INPUT pin, show an interactive button
-    if (mode === '"INPUT"' || mode === '"INPUT_PULLUP"') {
-      this._showButtonForPin(pin);
+    // Initialize button pin as HIGH (INPUT_PULLUP = not pressed)
+    if ((mode === '"INPUT_PULLUP"' || mode === '"INPUT"') && this._buttonStates[pin] === undefined) {
+      this._buttonStates[pin] = false;
+      // Auto-add a button widget in the sim-components area if not already declared
+      const alreadyDeclared = this._components.some(c => c.type === 'button' && c.pin === pin);
+      if (!alreadyDeclared) this._addAutoButton(pin, mode === '"INPUT_PULLUP"');
     }
+  }
+
+  // Dynamically add a button widget to the sim-components panel
+  _addAutoButton(pin, isPullup) {
+    const el = document.getElementById('sim-components');
+    if (!el) return;
+    if (document.getElementById(`auto-btn-${pin}`)) return; // already added
+    // Ensure the header label exists
+    if (!el.querySelector('.sim-comp-label')) {
+      el.innerHTML = '<div class="sim-comp-label">Hardware Components</div><div class="sim-comp-row" id="sim-comp-row"></div>';
+    }
+    let row = document.getElementById('sim-comp-row');
+    if (!row) { row = el.querySelector('.sim-comp-row'); }
+    if (!row) return;
+    const div = document.createElement('div');
+    div.className = 'comp-item';
+    div.id = `auto-btn-${pin}`;
+    div.innerHTML = `
+      <div class="comp-button" data-pin="${pin}"
+        onmousedown="if(window._board)window._board.setButtonPress(${pin},true)"
+        onmouseup="if(window._board)window._board.setButtonPress(${pin},false)"
+        onmouseleave="if(window._board)window._board.setButtonPress(${pin},false)"
+        ontouchstart="event.preventDefault();if(window._board)window._board.setButtonPress(${pin},true)"
+        ontouchend="event.preventDefault();if(window._board)window._board.setButtonPress(${pin},false)">
+        <div class="btn-cap">PUSH</div>
+      </div>
+      <div class="comp-label">Button · Pin ${pin}${isPullup ? '<br><small>(INPUT_PULLUP)</small>' : ''}</div>`;
+    row.appendChild(div);
   }
   setDigital(pin, val) {
     this._pins[pin] = this._pins[pin] || {};
@@ -347,14 +471,23 @@ class ArduinoBoard {
     this._pins[pin].digital = val > 0 ? 1 : 0;
     this._pins[pin].pwm = val;
     this._updatePinEl(pin, null, val);
+    // Update servo if this pin has a servo attached
+    if (pin in this._servoAngles) {
+      const angle = Math.round((val / 255) * 180);
+      this._servoAngles[pin] = angle;
+      this._updateServoEl(pin);
+    }
+    // Update RGB LED if any RGB pin
+    if (this._rgbPins && (pin === this._rgbPins.r || pin === this._rgbPins.g || pin === this._rgbPins.b)) {
+      this._updateRGBLed();
+    }
   }
-  getDigital(pin)       { return (this._pins[pin] && this._pins[pin].digital) ? 1 : 0; }
-  getDigitalInput(pin)  {
-    // If the pin has an interactive button state, use it
-    if (pin in this._btnState) return this._btnState[pin];
-    // Default: INPUT_PULLUP pins read HIGH, INPUT pins read LOW
-    const mode = this._pins[pin] && this._pins[pin].mode;
-    return mode === '"INPUT_PULLUP"' ? 1 : 0;
+  getDigital(pin) {
+    // Button with INPUT_PULLUP: pressed = LOW (0), released = HIGH (1)
+    if (pin in this._buttonStates) {
+      return this._buttonStates[pin] ? 0 : 1;
+    }
+    return (this._pins[pin] && this._pins[pin].digital) ? 1 : 0;
   }
   getAnalog(idx)   { return this._analog[idx] || 0; }
 
@@ -365,7 +498,6 @@ class ArduinoBoard {
   }
 
   _updatePinEl(pin, digital, pwm) {
-    // Special: pin 13 drives the big LED
     if (pin === 13) {
       const el = document.getElementById('sim-led-13');
       if (el) {
@@ -381,7 +513,6 @@ class ArduinoBoard {
         }
       }
     }
-    // Generic numbered pin LED (2-12)
     const el = document.getElementById(`sim-pin-${pin}`);
     if (!el) return;
     if (pwm !== null) {
@@ -419,11 +550,15 @@ class ArduinoBoard {
     if (this.sim) this.sim.serialLines = [];
   }
 
+  // ── Error tracking ────────────────────────────────────
+  getLastError() { return this._lastError; }
+
   // ── Core run engine ───────────────────────────────────
   async _execute(code, fastMode) {
     if (this._running) await this.stop();
 
-    this._running = true;
+    this._lastError    = null;
+    this._running      = true;
     this._resetAllPins();
 
     this.sim           = new SimObject(this, fastMode);
@@ -435,6 +570,7 @@ class ArduinoBoard {
     try {
       js = transpiler.transpile(code);
     } catch (e) {
+      this._lastError = `Transpile error: ${e.message}`;
       this.appendSerial(`[Transpile error] ${e.message}`, 'error');
       this._running = false;
       return;
@@ -458,6 +594,7 @@ class ArduinoBoard {
       const AF = Object.getPrototypeOf(async function(){}).constructor;
       fn = new AF('sim', body);
     } catch (e) {
+      this._lastError = `Syntax error: ${e.message}`;
       this.appendSerial(`[Syntax error] ${e.message}`, 'error');
       this._running = false;
       this._updateStatus('error');
@@ -469,12 +606,12 @@ class ArduinoBoard {
       await fn(this.sim);
     } catch (e) {
       if (e.message !== 'STOPPED') {
+        this._lastError = `Runtime error: ${e.message}`;
         this.appendSerial(`[Runtime error] ${e.message}`, 'error');
         if (!fastMode) this._updateStatus('error');
       }
     }
 
-    // Flush any trailing print() without println()
     if (this._serialBuf) this.flushSerial();
 
     this._running = false;
@@ -483,18 +620,14 @@ class ArduinoBoard {
   }
 
   // ── Public API ────────────────────────────────────────
-
-  /** Visual run — real delays (capped), ~8 loop iterations */
   async run(code) {
     this.clearSerial();
     await this._execute(code, false);
   }
 
-  /** Fast validation run — no delays, 40 iterations, no DOM spam */
   async runForCheck(code) {
     const prevSerial = document.getElementById('sim-serial')?.innerHTML;
     await this._execute(code, true);
-    // Restore serial display after fast run so user still sees previous output
     const out = document.getElementById('sim-serial');
     if (out && prevSerial) out.innerHTML = prevSerial;
   }
@@ -520,13 +653,31 @@ class ArduinoBoard {
   // ── Helpers ───────────────────────────────────────────
   _resetAllPins() {
     this._pins = {};
-    this._clearButtons();
     const led13 = document.getElementById('sim-led-13');
     if (led13) { led13.className = 'main-led'; led13.textContent = '○'; led13.style.removeProperty('--pwm-op'); }
     [2,3,4,5,6,7,8,9,10,11,12].forEach(p => {
       const el = document.getElementById(`sim-pin-${p}`);
       if (el) { el.className = 'pin-led'; el.style.removeProperty('--pwm'); }
     });
+    // Reset servo visuals
+    Object.keys(this._servoAngles).forEach(pin => {
+      this._servoAngles[pin] = 0;
+      this._updateServoEl(pin);
+    });
+    // Reset buzzer visuals
+    this._components.forEach(c => {
+      if (c.type === 'buzzer') this.showBuzzerActive(c.pin, 0, false);
+    });
+    // Reset RGB
+    this._rgbPins = this._rgbPins || null;
+    const circle = document.getElementById('rgb-circle');
+    if (circle) circle.style.backgroundColor = 'rgb(0,0,0)';
+    const rv = document.getElementById('rgb-r-val');
+    const gv = document.getElementById('rgb-g-val');
+    const bv = document.getElementById('rgb-b-val');
+    if (rv) rv.textContent = 'R:0';
+    if (gv) gv.textContent = 'G:0';
+    if (bv) bv.textContent = 'B:0';
   }
 
   _updateStatus(state) {

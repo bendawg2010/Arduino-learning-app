@@ -367,7 +367,7 @@ function renderLesson(lessonId) {
     };
   }
 
-  board = new ArduinoBoard(document.getElementById('sim-body'));
+  board = new ArduinoBoard(document.getElementById('sim-body'), currentLesson.components || []);
   renderStep();
 }
 
@@ -502,6 +502,19 @@ async function checkStepChallenge() {
 
   if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✔ Check My Code'; }
 
+  // Check for syntax/runtime errors first — never pass with broken code
+  const lastError = board.getLastError();
+  if (lastError) {
+    challengeAttempts++;
+    resultEl.className = 'challenge-result fail';
+    const safeErr = lastError.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    resultEl.innerHTML = `
+      <strong>❌ Code Error</strong><br>
+      <code class="err-msg">${safeErr}</code><br>
+      <button class="btn-explain" onclick="explainMistake('syntax')">💡 Explain My Mistake</button>`;
+    return;
+  }
+
   const simState = board.getState();
   let passed = false;
   try { passed = step.validate(code, simState); } catch(_) {}
@@ -524,8 +537,94 @@ async function checkStepChallenge() {
     const nextBtn = document.getElementById('step-next-btn');
     if (nextBtn) nextBtn.disabled = false;
   } else {
-    resultEl.innerHTML = '❌ Not quite — check the hint or re-read the step above!';
+    resultEl.innerHTML = `
+      ❌ Not quite right yet!<br>
+      <button class="btn-explain" onclick="explainMistake('logic')">💡 Explain My Mistake</button>
+      <button class="btn-hint" onclick="showStepHint()" style="margin-left:8px">💡 Show Hint</button>`;
   }
+}
+
+// ── Explain Mistake ───────────────────────────────────────
+function explainMistake(errorType) {
+  if (!currentLesson || !editor) return;
+  const step = currentLesson.steps[currentStepIdx];
+  const code = editor.getValue();
+  const resultEl = document.getElementById('step-challenge-result');
+  if (!resultEl) return;
+
+  // If the step has a custom explain function, use it
+  if (step.explainFn) {
+    const simState = board ? board.getState() : {};
+    const msg = step.explainFn(code, simState, errorType);
+    if (msg) {
+      showExplainModal(msg);
+      return;
+    }
+  }
+
+  // Generic explanations based on error type + common code analysis
+  let msg = '';
+  if (errorType === 'syntax') {
+    const lastError = board ? board.getLastError() : '';
+    msg = `<h3>🔍 Code Error Detected</h3>
+<p>Your code has a <strong>syntax error</strong> — this means the Arduino can't even understand it.</p>
+<p class="err-detail">${lastError ? lastError.replace(/</g,'&lt;') : 'Unknown error'}</p>
+<h4>Common causes:</h4>
+<ul>
+  <li>Missing semicolon <code>;</code> at the end of a line</li>
+  <li>Mismatched curly braces <code>{ }</code> — count your opens and closes!</li>
+  <li>Typo in a function name (remember: it's <code>digitalWrite</code> not <code>digitalwrite</code>)</li>
+  <li>Missing closing parenthesis <code>)</code></li>
+</ul>
+<p>💡 <strong>Tip:</strong> Read the error message above carefully — it usually tells you exactly what's wrong!</p>`;
+  } else {
+    // Analyze code for common logic mistakes
+    const lines = code.split('\n');
+    const hints = [];
+
+    if (step.hint) hints.push(`<li>${step.hint}</li>`);
+
+    // Check for missing setup()/loop()
+    if (!code.includes('void setup') && !code.includes('void loop')) {
+      hints.push('<li>Your sketch needs both <code>void setup()</code> and <code>void loop()</code> functions!</li>');
+    }
+
+    // Check for missing Serial.begin if Serial.print used
+    if (code.includes('Serial.print') && !code.includes('Serial.begin')) {
+      hints.push('<li>You\'re using <code>Serial.print()</code> but forgot <code>Serial.begin(9600);</code> in setup()!</li>');
+    }
+
+    // Check for missing pinMode
+    if ((code.includes('digitalWrite') || code.includes('digitalRead')) && !code.includes('pinMode')) {
+      hints.push('<li>Remember to call <code>pinMode(pin, OUTPUT)</code> or <code>pinMode(pin, INPUT)</code> in setup()!</li>');
+    }
+
+    msg = `<h3>🔍 Logic Check</h3>
+<p>Your code runs without errors, but it doesn't quite do what the challenge expects yet.</p>
+${hints.length > 0 ? `<h4>Things to check:</h4><ul>${hints.join('')}</ul>` : ''}
+<h4>General tips:</h4>
+<ul>
+  <li>Re-read the challenge description carefully</li>
+  <li>Check your pin numbers match what the challenge asks for</li>
+  <li>Make sure you're using the right function (<code>digitalWrite</code> vs <code>analogWrite</code>)</li>
+  <li>Check your delay values if timing matters</li>
+</ul>
+<p>💡 Use the <strong>Show Hint</strong> button for a specific tip about this challenge!</p>`;
+  }
+
+  showExplainModal(msg);
+}
+
+function showExplainModal(html) {
+  const modalBg = document.getElementById('modal-bg');
+  const modalTitle = document.getElementById('modal-title');
+  const modalBody  = document.getElementById('modal-body');
+  const modalFoot  = document.getElementById('modal-foot');
+  if (!modalBg) return;
+  modalTitle.textContent = 'Explaining Your Mistake';
+  modalBody.innerHTML = html;
+  modalFoot.innerHTML = '<button class="btn-primary" onclick="closeModal()">Got It!</button>';
+  modalBg.classList.remove('hidden');
 }
 
 function showStepHint() {
@@ -849,6 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.toggleRun           = toggleRun;
   window.resetCode           = resetCode;
   window.checkStepChallenge  = checkStepChallenge;
+  window.explainMistake      = explainMistake;
   window.showStepHint        = showStepHint;
   window.goNextStep          = goNextStep;
   window.goPrevStep          = goPrevStep;
