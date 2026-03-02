@@ -910,6 +910,215 @@ input, textarea { font-family: inherit; }
   .stats-row { grid-template-columns: 1fr 1fr; }
 }
 
+/* ═══════════════════════════════════════════════════════
+   MOBILE / iPHONE STYLES
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Safe area & base ───────────────────────────────── */
+:root {
+  --safe-top:    env(safe-area-inset-top,    0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left,   0px);
+  --safe-right:  env(safe-area-inset-right,  0px);
+  --tab-h: 60px;  /* mobile tab bar height */
+}
+
+/* Prevent rubber-band scrolling on the whole page */
+html { overscroll-behavior: none; }
+
+/* No text selection on UI chrome (feels more app-like) */
+.header, .sidebar, .mobile-tab-bar, .step-nav-btns,
+.lesson-nav-btns, .editor-toolbar {
+  user-select: none; -webkit-user-select: none;
+}
+
+/* ─── Mobile bottom tab bar ──────────────────────────── */
+.mobile-tab-bar {
+  display: none; /* hidden on desktop */
+}
+
+@media (max-width: 767px) {
+  /* Push content above the tab bar */
+  .layout { padding-bottom: calc(var(--tab-h) + var(--safe-bottom)); }
+
+  /* Fully hide sidebar on mobile — use bottom tabs instead */
+  .sidebar { display: none !important; }
+
+  /* Header: account for iOS status bar */
+  .header {
+    padding-top: var(--safe-top);
+    height: calc(56px + var(--safe-top));
+  }
+  .layout { padding-top: calc(56px + var(--safe-top)); }
+
+  /* Bottom tab bar */
+  .mobile-tab-bar {
+    display: flex;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    z-index: 200;
+    height: calc(var(--tab-h) + var(--safe-bottom));
+    padding-bottom: var(--safe-bottom);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .tab-item {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; padding: 6px 4px;
+    background: none; border: none; color: var(--text3);
+    font-family: var(--font-sans); cursor: pointer;
+    transition: color .15s, transform .1s;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px; /* Apple HIG minimum tap target */
+  }
+  .tab-item:active { transform: scale(0.9); }
+  .tab-item.active { color: var(--blue); }
+  .tab-icon { font-size: 1.35rem; line-height: 1; }
+  .tab-label { font-size: .62rem; font-weight: 600; letter-spacing: .02em; }
+
+  /* Content area */
+  .content {
+    margin-left: 0;
+    padding: 16px;
+    padding-left: calc(16px + var(--safe-left));
+    padding-right: calc(16px + var(--safe-right));
+  }
+
+  /* ─── Home screen on mobile ──────────────────────── */
+  .dash-hero { padding: 20px 16px; }
+  .dash-hero h1 { font-size: 1.4rem; }
+  .dash-hero .hero-btns { flex-direction: column; }
+  .dash-hero .hero-btns button { width: 100%; }
+  .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { padding: 14px; }
+  .stat-card .stat-val { font-size: 1.6rem; }
+  .lesson-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  /* ─── Lesson view on mobile ──────────────────────── */
+  .lesson-view {
+    display: flex; flex-direction: column;
+    height: auto; overflow: visible; gap: 0;
+  }
+
+  .lesson-header {
+    padding: 12px 0 10px;
+    flex-direction: column; align-items: flex-start; gap: 8px;
+  }
+  .lesson-header h1 { font-size: 1.05rem; }
+  .lesson-nav-btns { width: 100%; justify-content: space-between; }
+  .lesson-nav-btns button { flex: 1; padding: 8px 10px; font-size: .78rem; }
+
+  /* Step panel: fixed comfortable height */
+  .theory-panel {
+    height: auto;
+    min-height: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  #step-area { height: auto; min-height: 340px; }
+  .step-body { max-height: 45vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+  .step-nav-btns { padding: 10px 14px; }
+  .step-nav-btns button { min-height: 46px; font-size: .9rem; border-radius: var(--radius); }
+
+  /* Editor panel */
+  .editor-panel {
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    margin-top: 0; border-top: none;
+    height: 380px; flex-shrink: 0;
+  }
+  .editor-cm-wrap { flex: 1; min-height: 0; }
+  .editor-toolbar { flex-wrap: wrap; gap: 6px; padding: 8px 10px; }
+  .toolbar-title { display: none; } /* hide filename on small screens */
+  .run-btn, .check-btn, .quiz-btn, .reset-code-btn {
+    padding: 7px 14px; font-size: .78rem;
+    min-height: 36px;
+  }
+
+  /* Simulator */
+  .sim-panel { max-height: 200px; }
+  .arduino-board { min-width: 160px; padding: 8px; }
+
+  /* Hide code hint shortcut label on mobile */
+  .toolbar-title span { display: none; }
+
+  /* ─── Quiz / challenge tweaks ────────────────────── */
+  .quiz-opt { padding: 12px 14px; min-height: 48px; }
+  .challenge-box { padding: 12px; }
+
+  /* ─── Modal full-screen on small devices ─────────── */
+  .modal-bg { align-items: flex-end; padding: 0; }
+  .modal {
+    max-width: 100%; width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 85vh; display: flex; flex-direction: column;
+    padding-bottom: var(--safe-bottom);
+  }
+  .modal-body { flex: 1; overflow-y: auto; }
+
+  /* ─── Ref / Ach / Projects ───────────────────────── */
+  .ref-grid { grid-template-columns: 1fr; }
+  .ach-grid { grid-template-columns: 1fr 1fr; }
+  .project-grid { grid-template-columns: 1fr; }
+
+  /* ─── Swipe hint indicator ───────────────────────── */
+  .swipe-hint {
+    text-align: center; font-size: .68rem; color: var(--text3);
+    padding: 4px 0 0; letter-spacing: .04em;
+  }
+}
+
+/* iPhone SE and small screens */
+@media (max-width: 375px) {
+  .step-title { font-size: .95rem; }
+  .step-type-icon { font-size: 1.6rem; }
+  .dash-hero h1 { font-size: 1.2rem; }
+  .ach-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── Touch interaction improvements ─────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  /* Disable hover effects on touch devices */
+  .lesson-card:hover { transform: none; box-shadow: none; }
+  .btn-primary:hover, .btn-secondary:hover { transform: none; }
+  .nav-item:hover { background: none; }
+
+  /* Larger tap targets */
+  .btn-primary, .btn-secondary {
+    min-height: 46px; display: flex; align-items: center; justify-content: center;
+  }
+  .icon-btn { width: 40px; height: 40px; }
+
+  /* Active states instead of hover */
+  .lesson-card:active { transform: scale(0.98); }
+  .btn-primary:active { filter: brightness(1.1); }
+}
+
+/* ─── iOS "Add to Home Screen" install banner ─────────── */
+.install-banner {
+  position: fixed; bottom: calc(var(--tab-h) + var(--safe-bottom) + 10px); left: 12px; right: 12px;
+  z-index: 300;
+  background: var(--surface);
+  border: 1px solid var(--blue);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  display: flex; align-items: center; gap: 14px;
+  box-shadow: var(--shadow);
+  animation: toast-in .4s cubic-bezier(.22,1,.36,1);
+}
+.install-banner.hidden { display: none; }
+.install-banner-icon { font-size: 2rem; flex-shrink: 0; }
+.install-banner-text { flex: 1; font-size: .82rem; color: var(--text2); line-height: 1.5; }
+.install-banner-text strong { color: var(--text); display: block; margin-bottom: 2px; }
+.install-banner-close {
+  color: var(--text3); font-size: 1.1rem;
+  padding: 4px 8px; border-radius: 6px;
+  background: var(--surface3);
+}
+
   </style>
 </head>
 <body>
@@ -3082,6 +3291,46 @@ function showLevelUpToast(lvl) {
   setTimeout(() => toast.classList.add('hidden'), 3200);
 }
 
+// ── Mobile tab bar ────────────────────────────────────────
+function updateMobileTabs(screen) {
+  document.querySelectorAll('.tab-item').forEach(el => {
+    const tab = el.dataset.tab;
+    const match = tab === screen || (screen === 'lesson' && tab === 'lesson-picker');
+    el.classList.toggle('active', match);
+  });
+}
+
+function showLessonPicker() {
+  // On mobile, show a modal with all lessons grouped by difficulty
+  const groups = ['beginner', 'intermediate', 'advanced'];
+  const body = groups.map(diff => {
+    const lessons = LESSONS.filter(l => l.difficulty === diff);
+    return `
+      <div style="margin-bottom:16px">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;
+                    letter-spacing:.08em;color:var(--text3);margin-bottom:8px">${diff}</div>
+        ${lessons.map(l => {
+          const done = STATE.completedLessons.includes(l.id);
+          return `<div onclick="closeModal();navigate('lesson','${l.id}')"
+                       style="display:flex;align-items:center;gap:12px;
+                              padding:12px 14px;border-radius:var(--radius);
+                              background:var(--surface3);border:1px solid var(--border);
+                              margin-bottom:6px;cursor:pointer;min-height:52px">
+            <span style="font-size:1.4rem">${l.icon}</span>
+            <div style="flex:1">
+              <div style="font-size:.9rem;font-weight:600">${l.title}</div>
+              <div style="font-size:.72rem;color:var(--text3)">${l.steps ? l.steps.length : 0} steps · +${l.xp} XP</div>
+            </div>
+            ${done ? '<span style="color:var(--green);font-size:.9rem">✓</span>' : ''}
+          </div>`;
+        }).join('')}
+      </div>`;
+  }).join('');
+  showModal('📚 Choose a Lesson', body, `<button class="btn-secondary" onclick="closeModal()">Close</button>`);
+  document.getElementById('modal-bg').classList.remove('hidden');
+  updateMobileTabs('lesson');
+}
+
 // ── Navigation ──────────────────────────────────────────────
 async function navigate(screen, lessonId) {
   if (board && board.isRunning()) await board.stop();
@@ -3089,6 +3338,7 @@ async function navigate(screen, lessonId) {
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   const active = document.querySelector(`.nav-item[data-screen="${screen}"]`);
   if (active) active.classList.add('active');
+  updateMobileTabs(screen);
 
   const content = document.getElementById('content');
   if (screen === 'home') {
@@ -3795,6 +4045,62 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('sidebar').classList.add('collapsed');
     document.getElementById('content').classList.add('full');
   }
+
+  // ── Touch swipe for step navigation ──────────────────
+  let _touchX = 0, _touchY = 0;
+  document.addEventListener('touchstart', e => {
+    _touchX = e.touches[0].clientX;
+    _touchY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - _touchX;
+    const dy = e.changedTouches[0].clientY - _touchY;
+    // Horizontal swipe only, ignore vertical scrolls
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 52) {
+      if (!currentLesson || !currentLesson.steps) return;
+      // Don't interfere with CodeMirror or sliders
+      if (e.target.closest('.editor-cm-wrap') ||
+          e.target.closest('.analog-slider') ||
+          e.target.closest('.modal-bg')) return;
+      if (dx < 0) {
+        // Swipe left → next step
+        const btn = document.getElementById('step-next-btn');
+        if (btn && !btn.disabled) goNextStep();
+      } else {
+        // Swipe right → prev step
+        goPrevStep();
+      }
+    }
+  }, { passive: true });
+
+  // ── iOS install banner (shown once, on mobile Safari) ──
+  const isMobile = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone;
+  const bannerDismissed = localStorage.getItem('installBannerDismissed');
+
+  if (isMobile && !isStandalone && !bannerDismissed) {
+    setTimeout(() => {
+      const banner = document.createElement('div');
+      banner.className = 'install-banner';
+      banner.id = 'install-banner';
+      banner.innerHTML = `
+        <span class="install-banner-icon">📲</span>
+        <div class="install-banner-text">
+          <strong>Install ArduinoLearn</strong>
+          Tap <strong>Share</strong> then <strong>"Add to Home Screen"</strong> for the full app experience!
+        </div>
+        <button class="install-banner-close" onclick="dismissInstallBanner()">✕</button>`;
+      document.body.appendChild(banner);
+    }, 3000);
+  }
+
+  window.showLessonPicker = showLessonPicker;
+  window.dismissInstallBanner = () => {
+    const b = document.getElementById('install-banner');
+    if (b) b.remove();
+    localStorage.setItem('installBannerDismissed', '1');
+  };
 });
 
   </script>

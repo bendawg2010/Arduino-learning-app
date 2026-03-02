@@ -2,8 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>ArduinoLearn — Interactive Arduino Coding</title>
+
+  <!-- ── PWA / iOS Meta Tags ──────────────────────────── -->
+  <meta name="application-name" content="ArduinoLearn" />
+  <meta name="description" content="Step-by-step interactive Arduino coding lessons with a live simulator." />
+  <meta name="theme-color" content="#1f6feb" />
+
+  <!-- iOS Safari "Add to Home Screen" support -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Arduino" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+
+  <!-- Fonts & Styles -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
@@ -60,7 +77,7 @@
     </header>
 
     <div class="layout">
-      <!-- ── Sidebar ──────────────────────────────────── -->
+      <!-- ── Sidebar (desktop) ─────────────────────── -->
       <nav class="sidebar" id="sidebar">
         <div class="nav-item nav-home active" data-screen="home">
           <span>🏠</span> Dashboard
@@ -91,9 +108,33 @@
         </div>
       </nav>
 
-      <!-- ── Main content ─────────────────────────────── -->
+      <!-- ── Main content ─────────────────────────── -->
       <main class="content" id="content"></main>
     </div>
+
+    <!-- ── Mobile Bottom Tab Bar (iPhone) ──────────── -->
+    <nav class="mobile-tab-bar" id="mobile-tabs" aria-label="Main navigation">
+      <button class="tab-item active" data-tab="home" onclick="navigate('home')">
+        <span class="tab-icon">🏠</span>
+        <span class="tab-label">Home</span>
+      </button>
+      <button class="tab-item" data-tab="lesson-picker" id="tab-lessons" onclick="showLessonPicker()">
+        <span class="tab-icon">📚</span>
+        <span class="tab-label">Lessons</span>
+      </button>
+      <button class="tab-item" data-tab="playground" onclick="navigate('playground')">
+        <span class="tab-icon">🧪</span>
+        <span class="tab-label">Play</span>
+      </button>
+      <button class="tab-item" data-tab="reference" onclick="navigate('reference')">
+        <span class="tab-icon">📖</span>
+        <span class="tab-label">Ref</span>
+      </button>
+      <button class="tab-item" data-tab="achievements" onclick="navigate('achievements')">
+        <span class="tab-icon">🏆</span>
+        <span class="tab-label">Awards</span>
+      </button>
+    </nav>
   </div>
 
   <!-- ── Modal ──────────────────────────────────────── -->
@@ -114,5 +155,14 @@
   <script src="js/data.js"></script>
   <script src="js/simulator.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- Register Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>

@@ -122,6 +122,46 @@ function showLevelUpToast(lvl) {
   setTimeout(() => toast.classList.add('hidden'), 3200);
 }
 
+// ── Mobile tab bar ────────────────────────────────────────
+function updateMobileTabs(screen) {
+  document.querySelectorAll('.tab-item').forEach(el => {
+    const tab = el.dataset.tab;
+    const match = tab === screen || (screen === 'lesson' && tab === 'lesson-picker');
+    el.classList.toggle('active', match);
+  });
+}
+
+function showLessonPicker() {
+  // On mobile, show a modal with all lessons grouped by difficulty
+  const groups = ['beginner', 'intermediate', 'advanced'];
+  const body = groups.map(diff => {
+    const lessons = LESSONS.filter(l => l.difficulty === diff);
+    return `
+      <div style="margin-bottom:16px">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;
+                    letter-spacing:.08em;color:var(--text3);margin-bottom:8px">${diff}</div>
+        ${lessons.map(l => {
+          const done = STATE.completedLessons.includes(l.id);
+          return `<div onclick="closeModal();navigate('lesson','${l.id}')"
+                       style="display:flex;align-items:center;gap:12px;
+                              padding:12px 14px;border-radius:var(--radius);
+                              background:var(--surface3);border:1px solid var(--border);
+                              margin-bottom:6px;cursor:pointer;min-height:52px">
+            <span style="font-size:1.4rem">${l.icon}</span>
+            <div style="flex:1">
+              <div style="font-size:.9rem;font-weight:600">${l.title}</div>
+              <div style="font-size:.72rem;color:var(--text3)">${l.steps ? l.steps.length : 0} steps · +${l.xp} XP</div>
+            </div>
+            ${done ? '<span style="color:var(--green);font-size:.9rem">✓</span>' : ''}
+          </div>`;
+        }).join('')}
+      </div>`;
+  }).join('');
+  showModal('📚 Choose a Lesson', body, `<button class="btn-secondary" onclick="closeModal()">Close</button>`);
+  document.getElementById('modal-bg').classList.remove('hidden');
+  updateMobileTabs('lesson');
+}
+
 // ── Navigation ──────────────────────────────────────────────
 async function navigate(screen, lessonId) {
   if (board && board.isRunning()) await board.stop();
@@ -129,6 +169,7 @@ async function navigate(screen, lessonId) {
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   const active = document.querySelector(`.nav-item[data-screen="${screen}"]`);
   if (active) active.classList.add('active');
+  updateMobileTabs(screen);
 
   const content = document.getElementById('content');
   if (screen === 'home') {
@@ -835,4 +876,60 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('sidebar').classList.add('collapsed');
     document.getElementById('content').classList.add('full');
   }
+
+  // ── Touch swipe for step navigation ──────────────────
+  let _touchX = 0, _touchY = 0;
+  document.addEventListener('touchstart', e => {
+    _touchX = e.touches[0].clientX;
+    _touchY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - _touchX;
+    const dy = e.changedTouches[0].clientY - _touchY;
+    // Horizontal swipe only, ignore vertical scrolls
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 52) {
+      if (!currentLesson || !currentLesson.steps) return;
+      // Don't interfere with CodeMirror or sliders
+      if (e.target.closest('.editor-cm-wrap') ||
+          e.target.closest('.analog-slider') ||
+          e.target.closest('.modal-bg')) return;
+      if (dx < 0) {
+        // Swipe left → next step
+        const btn = document.getElementById('step-next-btn');
+        if (btn && !btn.disabled) goNextStep();
+      } else {
+        // Swipe right → prev step
+        goPrevStep();
+      }
+    }
+  }, { passive: true });
+
+  // ── iOS install banner (shown once, on mobile Safari) ──
+  const isMobile = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone;
+  const bannerDismissed = localStorage.getItem('installBannerDismissed');
+
+  if (isMobile && !isStandalone && !bannerDismissed) {
+    setTimeout(() => {
+      const banner = document.createElement('div');
+      banner.className = 'install-banner';
+      banner.id = 'install-banner';
+      banner.innerHTML = `
+        <span class="install-banner-icon">📲</span>
+        <div class="install-banner-text">
+          <strong>Install ArduinoLearn</strong>
+          Tap <strong>Share</strong> then <strong>"Add to Home Screen"</strong> for the full app experience!
+        </div>
+        <button class="install-banner-close" onclick="dismissInstallBanner()">✕</button>`;
+      document.body.appendChild(banner);
+    }, 3000);
+  }
+
+  window.showLessonPicker = showLessonPicker;
+  window.dismissInstallBanner = () => {
+    const b = document.getElementById('install-banner');
+    if (b) b.remove();
+    localStorage.setItem('installBannerDismissed', '1');
+  };
 });
