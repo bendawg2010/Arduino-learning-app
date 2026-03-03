@@ -1664,9 +1664,3 @@ html { overscroll-behavior: none; }
   transition: background .15s;
 }
 .hw-chip.active .hw-dot { background: var(--blue); box-shadow: 0 0 4px var(--blue); }
-
-/* Markdown table (hardware lesson theory) */
-.md-table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: .85rem; }
-.md-table th, .md-table td { border: 1px solid var(--border2); padding: 6px 10px; text-align: left; }
-.md-table th { background: var(--surface3); font-weight: 600; color: var(--text); }
-.md-table td { color: var(--text2); }

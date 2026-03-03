@@ -83,7 +83,8 @@ function _buildHWSteps(lesson) {
       content: `<p>${lesson.challenge}</p>`,
       code: lesson.starterCode || '',
       hint: 'Check the wiring section and re-read the theory for clues.',
-      validate: lesson.validate || (() => false),
+      // Hardware validators use validate(simState); checkStepChallenge calls (code, simState)
+      validate: lesson.validate ? (_code, simState) => lesson.validate(simState) : () => false,
     });
   }
 
@@ -367,105 +368,11 @@ function lessonCard(lesson) {
   </div>`;
 }
 
-// ── Markdown → HTML (for hardware lesson theory fields) ──
-function mdToHtml(md) {
-  if (!md) return '';
-  let h = md
-    // Fenced code blocks
-    .replace(/```[\w]*\n([\s\S]*?)```/g, (_, c) => `<pre><code>${c.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></pre>`)
-    // Tables: detect lines with | and convert
-    .replace(/((?:\|[^\n]+\|\n?)+)/g, (tbl) => {
-      const rows = tbl.trim().split('\n').filter(r => !/^\s*\|[-| :]+\|\s*$/.test(r));
-      if (rows.length < 1) return tbl;
-      const mkRow = (r, tag) => '<tr>' + r.split('|').filter((_, i, a) => i > 0 && i < a.length - 1)
-        .map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
-      return `<table class="md-table"><thead>${mkRow(rows[0], 'th')}</thead><tbody>${
-        rows.slice(1).map(r => mkRow(r, 'td')).join('')}</tbody></table>`;
-    })
-    // Headers
-    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
-    .replace(/^## (.+)$/gm,  '<h3>$1</h3>')
-    .replace(/^# (.+)$/gm,   '<h2>$1</h2>')
-    // Blockquotes
-    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-    // Lists
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>[\s\S]*?<\/li>)/g, (m) => `<ul>${m}</ul>`)
-    // Nested ul fix: collapse adjacent </ul><ul>
-    .replace(/<\/ul>\s*<ul>/g, '')
-    // Bold & italic
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Inline code
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    // Paragraphs: double newline
-    .replace(/\n\n+/g, '</p><p>')
-    .replace(/^(?!<[a-z])(.+)$/gm, (m) => m.trim() ? m : '');
-  return `<p>${h}</p>`.replace(/<p>\s*<\/p>/g, '').replace(/<p>(<(?:h[2-4]|ul|pre|blockquote|table)[^>]*>)/g, '$1').replace(/(<\/(?:h[2-4]|ul|pre|blockquote|table)>)<\/p>/g, '$1');
-}
-
-// ── Convert hardware-format lesson to step-based ──────────
-function buildHardwareSteps(lesson) {
-  const clone = Object.assign({}, lesson);
-
-  let theoryHtml = mdToHtml(lesson.theory || '');
-  if (lesson.parts && lesson.parts.length) {
-    theoryHtml = `<div class="info-box"><strong>Parts needed:</strong><ul>${
-      lesson.parts.map(p => `<li>${p}</li>`).join('')}</ul></div>` + theoryHtml;
-  }
-  if (lesson.wiring && lesson.wiring.length) {
-    theoryHtml += `<div class="info-box tip"><strong>Wiring:</strong><ul>${
-      lesson.wiring.map(w => `<li>${w}</li>`).join('')}</ul></div>`;
-  }
-  if (lesson.skills && lesson.skills.length) {
-    theoryHtml += `<div class="info-box"><strong>Skills:</strong> ${lesson.skills.join(' · ')}</div>`;
-  }
-
-  clone.steps = [];
-
-  // Step 1 — Theory
-  clone.steps.push({
-    type: 'learn',
-    title: lesson.title,
-    icon: lesson.icon || '📖',
-    content: theoryHtml,
-  });
-
-  // Step 2 — Run starter code
-  if (lesson.starterCode) {
-    clone.steps.push({
-      type: 'run',
-      title: 'Run the Starter Code',
-      icon: '▶',
-      content: `<h3>Try It in the Simulator!</h3>
-<p>Click <strong>▶ Run</strong> to execute the code. Watch the Serial Monitor output and interact with the simulator components.</p>`,
-      code: lesson.starterCode,
-    });
-  }
-
-  // Step 3 — Challenge
-  if (lesson.challenge) {
-    clone.steps.push({
-      type: 'challenge',
-      title: 'Your Challenge',
-      icon: '🎯',
-      content: `<h3>Challenge</h3><p>${lesson.challenge}</p>`,
-      code: lesson.starterCode || '',
-      // Hardware validators use (simState) but checkStepChallenge calls (code, simState)
-      validate: lesson.validate ? (_code, simState) => lesson.validate(simState) : undefined,
-      hint: 'Modify the starter code above to meet the challenge requirements. Check the Serial Monitor for output.',
-    });
-  }
-
-  return clone;
-}
-
 // ── Lesson Screen (step-based) ────────────────────────────
 function renderLesson(lessonId) {
   const raw = LESSONS.find(l => l.id === lessonId);
   if (!raw) return navigate('home');
-  // Hardware lessons use theory/starterCode format — convert to step format
-  currentLesson = raw.steps ? raw : buildHardwareSteps(raw);
+  currentLesson = raw;
 
   currentStepIdx      = 0;
   stepChallengePassed = false;
