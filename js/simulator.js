@@ -81,6 +81,20 @@ class ArduinoTranspiler {
     js = js.replace(/\brandom\s*\(/g,   'sim.random(');
     js = js.replace(/\btone\s*\(/g,     'sim.tone(');
     js = js.replace(/\bnoTone\s*\(/g,   'sim.noTone(');
+    js = js.replace(/\bpulseIn\s*\(/g,  'await sim.pulseIn(');
+
+    // ── Wire (I2C) library stubs ──────────────────────────
+    js = js.replace(/Wire\.begin\s*\(/g,            'sim.wireBegin(');
+    js = js.replace(/Wire\.beginTransmission\s*\(/g,'sim.wireBeginTransmission(');
+    js = js.replace(/Wire\.write\s*\(/g,            'sim.wireWrite(');
+    js = js.replace(/Wire\.endTransmission\s*\(/g,  'sim.wireEndTransmission(');
+    js = js.replace(/Wire\.requestFrom\s*\(/g,      'sim.wireRequestFrom(');
+    js = js.replace(/Wire\.read\s*\(/g,             'sim.wireRead(');
+    js = js.replace(/Wire\.available\s*\(/g,        'sim.wireAvailable(');
+
+    // ── Stepper library ───────────────────────────────────
+    // "Stepper myStepper(steps, p1, p2, p3, p4);" → let myStepper = sim.createStepper(steps,p1,p2,p3,p4);
+    js = js.replace(/\bStepper\s+(\w+)\s*\(/g, 'let $1 = sim.createStepper(');
 
     // ── Math aliases ─────────────────────────────────────
     js = js.replace(/\babs\s*\(/g,   'Math.abs(');
@@ -225,6 +239,62 @@ class SimObject {
   noTone(pin) {
     this._board.showBuzzerActive(pin, 0, false);
   }
+
+  // ── pulseIn (ultrasonic echo simulation) ──────────────
+  async pulseIn(pin, level) {
+    const dist = this._board.getUltrasonicDist();
+    const us = Math.round(dist * 58); // ~58 µs per cm round trip
+    await this.delayMicroseconds(us);
+    return us;
+  }
+
+  // ── Wire (I2C) library stubs ──────────────────────────
+  wireBegin() {}
+  wireBeginTransmission(addr) { this._wireAddr = addr; }
+  wireWrite(b) { this._wireTxBuf = this._wireTxBuf || []; this._wireTxBuf.push(b); }
+  wireEndTransmission() { return 0; }
+  wireRequestFrom(addr, count) {
+    // Return simulated 6-byte accel packet (X,Y,Z 16-bit each) from analog sliders A0–A2
+    const mapVal = v => Math.round(((v / 1023) * 32768) - 16384);
+    const toBytes = v => { const n = v & 0xFFFF; return [(n >> 8) & 0xFF, n & 0xFF]; };
+    const ax = mapVal(this._board.getAnalog(0));
+    const ay = mapVal(this._board.getAnalog(1));
+    const az = mapVal(this._board.getAnalog(2));
+    this._wireRxBuf = [...toBytes(ax), ...toBytes(ay), ...toBytes(az)];
+    this._wireRxIdx = 0;
+    return count;
+  }
+  wireRead() {
+    if (!this._wireRxBuf || this._wireRxIdx >= this._wireRxBuf.length) return 0;
+    return this._wireRxBuf[this._wireRxIdx++];
+  }
+  wireAvailable() {
+    if (!this._wireRxBuf) return 0;
+    return Math.max(0, this._wireRxBuf.length - (this._wireRxIdx || 0));
+  }
+
+  // ── Stepper library stub ──────────────────────────────
+  createStepper(stepsPerRev, p1, p2, p3, p4) {
+    const board = this._board;
+    const pins = [p1, p2, p3, p4];
+    // 4-step full-step sequence: {IN1,IN2,IN3,IN4}
+    const seq = [[1,0,1,0],[0,1,1,0],[0,1,0,1],[1,0,0,1]];
+    let stepIdx = 0;
+    const applyStep = () => {
+      seq[stepIdx].forEach((v, i) => board.setDigital(pins[i], v));
+    };
+    return {
+      setSpeed(rpm) { /* visual only */ },
+      step(n) {
+        const dir = n > 0 ? 1 : -1;
+        const count = Math.abs(n);
+        for (let i = 0; i < count; i++) {
+          stepIdx = (stepIdx + dir + 4) % 4;
+          applyStep();
+        }
+      }
+    };
+  }
 }
 
 // ── ArduinoBoard — visual board + runner ──────────────────
@@ -359,11 +429,154 @@ class ArduinoBoard {
           </div>`;
         // Store pin mapping for RGB updates
         this._rgbPins = {r, g, b};
+      } else if (comp.type === 'ultrasonic') {
+        this._ultrasonicDist = 50; // default 50 cm
+        html += `
+          <div class="comp-item">
+            <div class="comp-ultrasonic" id="ultra-${comp.echoPin}">
+              <div class="ultra-icon">📡</div>
+              <div class="ultra-readout">
+                <span class="ultra-dist" id="ultra-dist-${comp.echoPin}">50</span>
+                <span class="ultra-cm">cm</span>
+              </div>
+              <input type="range" class="ultra-slider" id="ultra-slider-${comp.echoPin}"
+                min="2" max="400" value="50"
+                oninput="if(window._board)window._board.setUltrasonicDist(this.value,${comp.echoPin})" />
+            </div>
+            <div class="comp-label">HC-SR04 · Trig:${comp.trigPin} Echo:${comp.echoPin}</div>
+          </div>`;
+      } else if (comp.type === 'motor') {
+        this._motorPins = {enablePin: comp.enablePin, in1Pin: comp.in1Pin, in2Pin: comp.in2Pin};
+        html += `
+          <div class="comp-item">
+            <div class="comp-motor" id="motor-${comp.enablePin}">
+              <div class="motor-icon">⚙️</div>
+              <div class="motor-bar-bg">
+                <div class="motor-bar" id="motor-bar-${comp.enablePin}" style="width:0%"></div>
+              </div>
+              <div class="motor-stats">
+                <span class="motor-speed" id="motor-speed-${comp.enablePin}">0%</span>
+                <span class="motor-dir" id="motor-dir-${comp.enablePin}">Coast</span>
+              </div>
+            </div>
+            <div class="comp-label">DC Motor · EN:${comp.enablePin} IN1:${comp.in1Pin} IN2:${comp.in2Pin}</div>
+          </div>`;
+      } else if (comp.type === 'stepper') {
+        this._stepperPins = comp.pins;
+        this._stepperCount = 0;
+        html += `
+          <div class="comp-item">
+            <div class="comp-stepper" id="stepper-${comp.pins[0]}">
+              <div class="stepper-coils">
+                ${comp.pins.map((p, i) => `
+                  <div class="stepper-coil" id="stepper-coil-${comp.pins[0]}-${i}">
+                    <span>C${i+1}</span>
+                  </div>`).join('')}
+              </div>
+              <div class="stepper-info" id="stepper-step-${comp.pins[0]}">Step: 0</div>
+            </div>
+            <div class="comp-label">Stepper · Pins ${comp.pins.join(', ')}</div>
+          </div>`;
+      } else if (comp.type === 'imu') {
+        html += `
+          <div class="comp-item comp-imu-item">
+            <div class="comp-imu" id="comp-imu">
+              <div class="imu-title">🔵 IMU / Accel</div>
+              <div class="imu-rows">
+                <div class="imu-row">
+                  <span class="imu-axis x">X</span>
+                  <input type="range" class="imu-slider" min="0" max="1023" value="512"
+                    oninput="if(window._board){window._board.setAnalogSlider(0,this.value);window._board.updateIMUDisplay();}" />
+                  <span class="imu-val" id="imu-x-val">0°</span>
+                </div>
+                <div class="imu-row">
+                  <span class="imu-axis y">Y</span>
+                  <input type="range" class="imu-slider" min="0" max="1023" value="512"
+                    oninput="if(window._board){window._board.setAnalogSlider(1,this.value);window._board.updateIMUDisplay();}" />
+                  <span class="imu-val" id="imu-y-val">0°</span>
+                </div>
+                <div class="imu-row">
+                  <span class="imu-axis z">Z</span>
+                  <input type="range" class="imu-slider" min="0" max="1023" value="512"
+                    oninput="if(window._board){window._board.setAnalogSlider(2,this.value);window._board.updateIMUDisplay();}" />
+                  <span class="imu-val" id="imu-z-val">0°</span>
+                </div>
+              </div>
+            </div>
+            <div class="comp-label">IMU · I2C (SDA:A4 SCL:A5)</div>
+          </div>`;
       }
     });
 
     html += '</div>';
     el.innerHTML = html;
+  }
+
+  // ── Ultrasonic sensor ─────────────────────────────────
+  setUltrasonicDist(cm, echoPin) {
+    this._ultrasonicDist = parseInt(cm);
+    const lbl = document.getElementById(`ultra-dist-${echoPin}`);
+    if (lbl) lbl.textContent = cm;
+  }
+  getUltrasonicDist() { return this._ultrasonicDist || 50; }
+
+  // ── DC Motor display ──────────────────────────────────
+  _tryUpdateMotor(pin) {
+    if (!this._motorPins) return;
+    const mp = this._motorPins;
+    if (pin !== mp.enablePin && pin !== mp.in1Pin && pin !== mp.in2Pin) return;
+    const rawPwm = this._pins[mp.enablePin];
+    const speed = rawPwm?.pwm ?? (rawPwm?.digital ? 255 : 0);
+    const in1 = this._pins[mp.in1Pin]?.digital ?? 0;
+    const in2 = this._pins[mp.in2Pin]?.digital ?? 0;
+    const pct = Math.round((speed / 255) * 100);
+    let dir = 'Coast';
+    if (in1 && !in2)  dir = '▶ Fwd';
+    else if (!in1 && in2) dir = '◀ Rev';
+    else if (in1 && in2)  dir = '■ Brake';
+    const speedEl = document.getElementById(`motor-speed-${mp.enablePin}`);
+    const dirEl   = document.getElementById(`motor-dir-${mp.enablePin}`);
+    const barEl   = document.getElementById(`motor-bar-${mp.enablePin}`);
+    if (speedEl) speedEl.textContent = `${pct}%`;
+    if (dirEl)   dirEl.textContent   = dir;
+    if (barEl)   barEl.style.width   = `${pct}%`;
+    const motorEl = document.getElementById(`motor-${mp.enablePin}`);
+    if (motorEl) motorEl.classList.toggle('running', pct > 0);
+  }
+
+  // ── Stepper coil display ──────────────────────────────
+  _tryUpdateStepper(pin) {
+    if (!this._stepperPins || !this._stepperPins.includes(pin)) return;
+    const pins = this._stepperPins;
+    let changed = false;
+    pins.forEach((p, i) => {
+      const el = document.getElementById(`stepper-coil-${pins[0]}-${i}`);
+      const active = !!(this._pins[p]?.digital);
+      if (el) {
+        const was = el.classList.contains('active');
+        el.classList.toggle('active', active);
+        if (active && !was) changed = true;
+      }
+    });
+    if (changed) {
+      this._stepperCount = (this._stepperCount || 0) + 1;
+      const lbl = document.getElementById(`stepper-step-${pins[0]}`);
+      if (lbl) lbl.textContent = `Step: ${this._stepperCount}`;
+    }
+  }
+
+  // ── IMU display ───────────────────────────────────────
+  updateIMUDisplay() {
+    const toAngle = v => Math.round(((v - 512) / 512) * 90);
+    const x = toAngle(this._analog[0]);
+    const y = toAngle(this._analog[1]);
+    const z = toAngle(this._analog[2]);
+    const ex = document.getElementById('imu-x-val');
+    const ey = document.getElementById('imu-y-val');
+    const ez = document.getElementById('imu-z-val');
+    if (ex) ex.textContent = `${x}°`;
+    if (ey) ey.textContent = `${y}°`;
+    if (ez) ez.textContent = `${z}°`;
   }
 
   // ── Button control ────────────────────────────────────
@@ -465,6 +678,8 @@ class ArduinoBoard {
     this._pins[pin].digital = val;
     this._pins[pin].pwm = null;
     this._updatePinEl(pin, val, null);
+    this._tryUpdateMotor(pin);
+    this._tryUpdateStepper(pin);
   }
   setPWM(pin, val) {
     this._pins[pin] = this._pins[pin] || {};
@@ -481,6 +696,7 @@ class ArduinoBoard {
     if (this._rgbPins && (pin === this._rgbPins.r || pin === this._rgbPins.g || pin === this._rgbPins.b)) {
       this._updateRGBLed();
     }
+    this._tryUpdateMotor(pin);
   }
   getDigital(pin) {
     // Button with INPUT_PULLUP: pressed = LOW (0), released = HIGH (1)
@@ -668,6 +884,28 @@ class ArduinoBoard {
     this._components.forEach(c => {
       if (c.type === 'buzzer') this.showBuzzerActive(c.pin, 0, false);
     });
+    // Reset motor display
+    if (this._motorPins) {
+      const mp = this._motorPins;
+      const sEl = document.getElementById(`motor-speed-${mp.enablePin}`);
+      const dEl = document.getElementById(`motor-dir-${mp.enablePin}`);
+      const bEl = document.getElementById(`motor-bar-${mp.enablePin}`);
+      const mEl = document.getElementById(`motor-${mp.enablePin}`);
+      if (sEl) sEl.textContent = '0%';
+      if (dEl) dEl.textContent = 'Coast';
+      if (bEl) bEl.style.width = '0%';
+      if (mEl) mEl.classList.remove('running');
+    }
+    // Reset stepper display
+    if (this._stepperPins) {
+      this._stepperCount = 0;
+      const lbl = document.getElementById(`stepper-step-${this._stepperPins[0]}`);
+      if (lbl) lbl.textContent = 'Step: 0';
+      this._stepperPins.forEach((p, i) => {
+        const el = document.getElementById(`stepper-coil-${this._stepperPins[0]}-${i}`);
+        if (el) el.classList.remove('active');
+      });
+    }
     // Reset RGB
     this._rgbPins = this._rgbPins || null;
     const circle = document.getElementById('rgb-circle');

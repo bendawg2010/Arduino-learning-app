@@ -1292,6 +1292,157 @@ html { overscroll-behavior: none; }
   color: var(--text3);
 }
 
+/* ── Ultrasonic Sensor ───────────────────────────────────── */
+.comp-ultrasonic {
+  width: 88px;
+  background: var(--surface3);
+  border: 2px solid #555;
+  border-radius: 12px;
+  display: flex; flex-direction: column;
+  align-items: center; padding: 8px 6px; gap: 5px;
+}
+.ultra-icon { font-size: 1.4rem; }
+.ultra-readout {
+  display: flex; align-items: baseline; gap: 3px;
+}
+.ultra-dist {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--blue);
+}
+.ultra-cm {
+  font-size: .68rem;
+  color: var(--text3);
+}
+.ultra-slider {
+  width: 76px;
+  accent-color: var(--blue);
+}
+
+/* ── DC Motor (H-Bridge) ─────────────────────────────────── */
+.comp-motor {
+  width: 100px;
+  background: var(--surface3);
+  border: 2px solid #555;
+  border-radius: 12px;
+  display: flex; flex-direction: column;
+  align-items: center; padding: 8px 6px; gap: 5px;
+  transition: border-color .2s;
+}
+.comp-motor.running {
+  border-color: var(--green);
+}
+.motor-icon { font-size: 1.3rem; }
+.motor-bar-bg {
+  width: 84px; height: 8px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.motor-bar {
+  height: 100%;
+  background: var(--green);
+  border-radius: 4px;
+  transition: width .15s, background .2s;
+  width: 0%;
+}
+.comp-motor.running .motor-bar {
+  background: var(--green);
+}
+.motor-stats {
+  display: flex; gap: 8px; align-items: center;
+}
+.motor-speed {
+  font-size: .82rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--green);
+}
+.motor-dir {
+  font-size: .72rem;
+  color: var(--text2);
+}
+
+/* ── Stepper Motor ───────────────────────────────────────── */
+.comp-stepper {
+  background: var(--surface3);
+  border: 2px solid #555;
+  border-radius: 12px;
+  display: flex; flex-direction: column;
+  align-items: center; padding: 8px 8px; gap: 6px;
+}
+.stepper-coils {
+  display: flex; gap: 6px;
+}
+.stepper-coil {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid #555;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .62rem;
+  font-weight: 700;
+  color: var(--text3);
+  transition: background .1s, border-color .1s, color .1s;
+}
+.stepper-coil.active {
+  background: var(--yellow, #fbbf24);
+  border-color: #f59e0b;
+  color: #000;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+}
+.stepper-info {
+  font-size: .72rem;
+  font-family: var(--font-mono);
+  color: var(--text3);
+}
+
+/* ── IMU Component ───────────────────────────────────────── */
+.comp-imu-item { align-items: stretch; }
+.comp-imu {
+  background: var(--surface3);
+  border: 2px solid #555;
+  border-radius: 12px;
+  padding: 8px 10px;
+  min-width: 160px;
+}
+.imu-title {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text2);
+  margin-bottom: 6px;
+  text-align: center;
+}
+.imu-rows {
+  display: flex; flex-direction: column; gap: 5px;
+}
+.imu-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.imu-axis {
+  font-size: .7rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  width: 14px;
+  text-align: center;
+}
+.imu-axis.x { color: #f87171; }
+.imu-axis.y { color: #4ade80; }
+.imu-axis.z { color: #60a5fa; }
+.imu-slider {
+  flex: 1;
+  accent-color: var(--blue);
+  height: 4px;
+}
+.imu-val {
+  font-size: .68rem;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  width: 32px;
+  text-align: right;
+}
+
 /* ─── Explain Mistake Button ─────────────────────────────── */
 .btn-explain {
   display: inline-block;

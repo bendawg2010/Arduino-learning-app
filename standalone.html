@@ -1303,6 +1303,157 @@ html { overscroll-behavior: none; }
   color: var(--text3);
 }
 
+/* ── Ultrasonic Sensor ───────────────────────────────────── */
+.comp-ultrasonic {
+  width: 88px;
+  background: var(--surface3);
+  border: 2px solid #555;
+  border-radius: 12px;
+  display: flex; flex-direction: column;
+  align-items: center; padding: 8px 6px; gap: 5px;
+}
+.ultra-icon { font-size: 1.4rem; }
+.ultra-readout {
+  display: flex; align-items: baseline; gap: 3px;
+}
+.ultra-dist {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--blue);
+}
+.ultra-cm {
+  font-size: .68rem;
+  color: var(--text3);
+}
+.ultra-slider {
+  width: 76px;
+  accent-color: var(--blue);
+}
+
+/* ── DC Motor (H-Bridge) ─────────────────────────────────── */
+.comp-motor {
+  width: 100px;
+  background: var(--surface3);
+  border: 2px solid #555;
+  border-radius: 12px;
+  display: flex; flex-direction: column;
+  align-items: center; padding: 8px 6px; gap: 5px;
+  transition: border-color .2s;
+}
+.comp-motor.running {
+  border-color: var(--green);
+}
+.motor-icon { font-size: 1.3rem; }
+.motor-bar-bg {
+  width: 84px; height: 8px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.motor-bar {
+  height: 100%;
+  background: var(--green);
+  border-radius: 4px;
+  transition: width .15s, background .2s;
+  width: 0%;
+}
+.comp-motor.running .motor-bar {
+  background: var(--green);
+}
+.motor-stats {
+  display: flex; gap: 8px; align-items: center;
+}
+.motor-speed {
+  font-size: .82rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--green);
+}
+.motor-dir {
+  font-size: .72rem;
+  color: var(--text2);
+}
+
+/* ── Stepper Motor ───────────────────────────────────────── */
+.comp-stepper {
+  background: var(--surface3);
+  border: 2px solid #555;
+  border-radius: 12px;
+  display: flex; flex-direction: column;
+  align-items: center; padding: 8px 8px; gap: 6px;
+}
+.stepper-coils {
+  display: flex; gap: 6px;
+}
+.stepper-coil {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid #555;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .62rem;
+  font-weight: 700;
+  color: var(--text3);
+  transition: background .1s, border-color .1s, color .1s;
+}
+.stepper-coil.active {
+  background: var(--yellow, #fbbf24);
+  border-color: #f59e0b;
+  color: #000;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+}
+.stepper-info {
+  font-size: .72rem;
+  font-family: var(--font-mono);
+  color: var(--text3);
+}
+
+/* ── IMU Component ───────────────────────────────────────── */
+.comp-imu-item { align-items: stretch; }
+.comp-imu {
+  background: var(--surface3);
+  border: 2px solid #555;
+  border-radius: 12px;
+  padding: 8px 10px;
+  min-width: 160px;
+}
+.imu-title {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text2);
+  margin-bottom: 6px;
+  text-align: center;
+}
+.imu-rows {
+  display: flex; flex-direction: column; gap: 5px;
+}
+.imu-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.imu-axis {
+  font-size: .7rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  width: 14px;
+  text-align: center;
+}
+.imu-axis.x { color: #f87171; }
+.imu-axis.y { color: #4ade80; }
+.imu-axis.z { color: #60a5fa; }
+.imu-slider {
+  flex: 1;
+  accent-color: var(--blue);
+  height: 4px;
+}
+.imu-val {
+  font-size: .68rem;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  width: 32px;
+  text-align: right;
+}
+
 /* ─── Explain Mistake Button ─────────────────────────────── */
 .btn-explain {
   display: inline-block;
@@ -6219,6 +6370,804 @@ const PROJECTS = [
     difficulty: 'advanced',
     skills: ['analogWrite', 'PWM', 'map()', 'Arrays'],
   },
+
+  // ── Real Hardware Lessons ────────────────────────────────
+
+  {
+    id: 'ultrasonic_sensor',
+    icon: '📡',
+    title: 'HC-SR04 Ultrasonic Distance',
+    xp: 65,
+    difficulty: 'beginner',
+    desc: 'Use a real ultrasonic sensor to measure distances using sound pulses. Learn pulseIn(), timing in microseconds, and convert to centimeters.',
+    parts: ['Arduino Uno', 'HC-SR04 ultrasonic sensor', '1x LED', '220Ω resistor', 'Breadboard', 'Jumper wires'],
+    skills: ['pulseIn()', 'delayMicroseconds()', 'Serial output', 'if/else'],
+    components: [{ type: 'ultrasonic', trigPin: 9, echoPin: 10 }],
+    wiring: [
+      'HC-SR04 VCC → 5V',
+      'HC-SR04 GND → GND',
+      'HC-SR04 TRIG → Pin 9',
+      'HC-SR04 ECHO → Pin 10',
+      'LED (+) → 220Ω → Pin 13, LED (-) → GND',
+    ],
+    theory: `
+## How the HC-SR04 Works
+
+The HC-SR04 sends a burst of 8 ultrasonic pulses at **40 kHz** when you pulse TRIG HIGH for 10 µs. Sound bounces off an object and returns to the sensor. The ECHO pin stays HIGH for the duration of the round-trip:
+
+\`\`\`
+distance (cm) = pulse duration (µs) ÷ 58
+\`\`\`
+
+Sound travels ~343 m/s, so the round-trip per cm takes ~58 µs.
+
+### pulseIn()
+
+\`pulseIn(pin, HIGH)\` waits for the pin to go HIGH, measures how long it stays HIGH (in µs), then returns that value:
+
+\`\`\`cpp
+long duration = pulseIn(echoPin, HIGH);  // µs
+float cm = duration / 58.0;
+\`\`\`
+
+### Wiring
+
+\`\`\`
+    Arduino          HC-SR04
+    5V       ──────  VCC
+    GND      ──────  GND
+    Pin 9    ──────  TRIG   (output: trigger pulse)
+    Pin 10   ──────  ECHO   (input: echo return)
+\`\`\`
+
+> HC-SR04 ECHO outputs 5V — this is safe for Arduino Uno pins but not for 3.3V boards (use a voltage divider on those).
+
+### Simulator
+Drag the **distance slider** on the HC-SR04 component to simulate objects at different distances. \`pulseIn()\` returns the correct µs timing automatically.
+    `,
+    starterCode: `// HC-SR04 Ultrasonic Distance Sensor
+// Wiring: TRIG→Pin 9, ECHO→Pin 10
+// Simulator: drag the distance slider on the sensor component
+
+const int TRIG_PIN = 9;
+const int ECHO_PIN = 10;
+const int ALERT_LED = 13;
+
+void setup() {
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(ALERT_LED, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("HC-SR04 ready — drag slider to set distance!");
+}
+
+void loop() {
+  // 1. Send 10µs trigger pulse
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  // 2. Measure echo duration (µs)
+  long duration = pulseIn(ECHO_PIN, HIGH);
+
+  // 3. Convert: ~58 µs per cm (round trip at 343 m/s)
+  float cm = duration / 58.0;
+
+  Serial.print("Distance: ");
+  Serial.print(cm, 1);
+  Serial.println(" cm");
+
+  // Alert LED: on if closer than 20 cm
+  if (cm < 20.0) {
+    digitalWrite(ALERT_LED, HIGH);
+    Serial.println("  !! OBJECT CLOSE !!");
+  } else {
+    digitalWrite(ALERT_LED, LOW);
+  }
+
+  delay(200);
+}
+`,
+    challenge: 'Make the LED blink faster as objects get closer. Use the distance to set the blink delay: closer = shorter delay. Try: delay = (int)(cm * 5);',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l => l.includes('cm'));
+    },
+  },
+
+  {
+    id: 'dc_motor_hbridge',
+    icon: '🔄',
+    title: 'DC Motor & H-Bridge (L298N)',
+    xp: 75,
+    difficulty: 'intermediate',
+    desc: 'Control a DC motor with an L298N H-bridge driver. Learn forward, reverse, speed control with PWM, and why H-bridges are essential for motor control.',
+    parts: ['Arduino Uno', 'L298N H-bridge module', 'DC motor (3–12V)', 'External power supply', 'Breadboard', 'Jumper wires'],
+    skills: ['analogWrite', 'PWM speed control', 'Direction control', 'H-bridge logic table'],
+    components: [{ type: 'motor', enablePin: 6, in1Pin: 7, in2Pin: 8 }],
+    wiring: [
+      'L298N ENA → Pin 6 (PWM~)',
+      'L298N IN1 → Pin 7',
+      'L298N IN2 → Pin 8',
+      'L298N +12V → External supply positive',
+      'L298N GND → Arduino GND + supply GND',
+      'Motor terminals → L298N OUT1 & OUT2',
+    ],
+    theory: `
+## Why You Need an H-Bridge
+
+A DC motor draws far more current than an Arduino pin can provide (max 40 mA per pin). The **L298N** uses power transistors to supply motor current from an external supply while your Arduino controls the logic.
+
+An H-bridge has 4 transistors arranged in an "H" shape. By opening/closing different pairs, you reverse current flow — reversing the motor direction.
+
+### L298N Logic Table
+
+| ENA (speed) | IN1  | IN2  | Motor behavior |
+|-------------|------|------|----------------|
+| 0–255 PWM   | HIGH | LOW  | ▶ Forward      |
+| 0–255 PWM   | LOW  | HIGH | ◀ Reverse      |
+| any         | LOW  | LOW  | ~ Coast (free) |
+| any         | HIGH | HIGH | ■ Brake (lock) |
+
+### Wiring
+
+\`\`\`
+    Arduino          L298N Module
+    Pin 6 (PWM~) ──  ENA    (speed 0-255)
+    Pin 7        ──  IN1    (direction A)
+    Pin 8        ──  IN2    (direction B)
+    GND          ──  GND    (share with supply!)
+                     +12V ← external supply
+                     OUT1 / OUT2 → Motor terminals
+\`\`\`
+
+> **NEVER** connect a motor directly to an Arduino pin — back-EMF spikes will damage the microcontroller.
+
+### Simulator
+Watch the motor component: the speed bar fills with PWM%, the direction label updates with Forward/Reverse/Coast/Brake in real time.
+    `,
+    starterCode: `// DC Motor Control — L298N H-Bridge
+// ENA→Pin 6 (PWM), IN1→Pin 7, IN2→Pin 8
+
+const int ENA = 6;  // Speed via PWM (0-255)
+const int IN1 = 7;  // Direction control
+const int IN2 = 8;  // Direction control
+
+void setup() {
+  pinMode(ENA, OUTPUT);
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("L298N Motor driver ready!");
+}
+
+void motorForward(int speed) {
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  analogWrite(ENA, speed);  // 0-255
+}
+
+void motorReverse(int speed) {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+  analogWrite(ENA, speed);
+}
+
+void motorStop() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  analogWrite(ENA, 0);
+}
+
+void loop() {
+  Serial.println("Forward at 50% speed...");
+  motorForward(128);
+  delay(2000);
+
+  Serial.println("Braking...");
+  motorStop();
+  delay(500);
+
+  Serial.println("Reverse at 75% speed...");
+  motorReverse(192);
+  delay(2000);
+
+  Serial.println("Full stop.");
+  motorStop();
+  delay(1000);
+}
+`,
+    challenge: 'Add a soft-start ramp: instead of jumping instantly to full speed, use a for loop to gradually increase analogWrite from 0 to 200 over 1 second (50 steps × 20ms each).',
+    validate(state) {
+      return state.pwmUsed && state.serialUsed;
+    },
+  },
+
+  {
+    id: 'stepper_motor',
+    icon: '⚙️',
+    title: 'Stepper Motor Control',
+    xp: 80,
+    difficulty: 'intermediate',
+    desc: 'Drive a 28BYJ-48 stepper motor precisely step by step. Understand coil energizing sequences, use the Stepper library, and calculate steps per revolution.',
+    parts: ['Arduino Uno', '28BYJ-48 stepper motor', 'ULN2003 driver board', 'Breadboard', 'Jumper wires'],
+    skills: ['Stepper library', 'Coil sequences', 'setSpeed()', 'step()', 'Gear ratios'],
+    components: [{ type: 'stepper', pins: [8, 9, 10, 11] }],
+    wiring: [
+      'ULN2003 IN1 → Pin 8',
+      'ULN2003 IN2 → Pin 9',
+      'ULN2003 IN3 → Pin 10',
+      'ULN2003 IN4 → Pin 11',
+      'ULN2003 VCC → 5V (external 5V recommended)',
+      'ULN2003 GND → GND',
+    ],
+    theory: `
+## How Steppers Work
+
+A stepper motor moves in discrete **steps** by energizing its coils in a specific sequence. Unlike DC motors, steppers need no feedback — each step is a guaranteed angular movement.
+
+### 28BYJ-48 Specs
+
+| Property | Value |
+|----------|-------|
+| Type | Unipolar, 4-phase |
+| Internal step angle | 5.625° |
+| Gear ratio | ~64:1 |
+| Steps/revolution | 2048 (with gearbox) |
+| Operating voltage | 5V |
+| Driver | ULN2003 (Darlington array) |
+
+### Full-Step Coil Sequence
+
+| Step | IN1 | IN2 | IN3 | IN4 |
+|------|-----|-----|-----|-----|
+|  1   |  1  |  0  |  1  |  0  |
+|  2   |  0  |  1  |  1  |  0  |
+|  3   |  0  |  1  |  0  |  1  |
+|  4   |  1  |  0  |  0  |  1  |
+
+Repeat to spin CW; reverse for CCW.
+
+### Stepper Library
+
+Arduino's built-in \`Stepper\` library handles the sequence:
+
+\`\`\`cpp
+Stepper myStepper(2048, 8, 10, 9, 11); // note pin order!
+myStepper.setSpeed(10);  // RPM
+myStepper.step(2048);    // one full revolution CW
+myStepper.step(-512);    // quarter rev CCW
+\`\`\`
+
+### Wiring
+
+\`\`\`
+    Arduino      ULN2003 board
+    Pin 8  ────  IN1
+    Pin 9  ────  IN2
+    Pin 10 ────  IN3
+    Pin 11 ────  IN4
+    5V     ────  VCC  (or ext. 5V)
+    GND    ────  GND
+\`\`\`
+
+### Simulator
+Watch the **C1–C4 coil LEDs** light up in sequence as the motor steps. The step counter tracks total steps taken.
+    `,
+    starterCode: `// Stepper Motor — 28BYJ-48 + ULN2003
+// Pins: IN1→8, IN2→9, IN3→10, IN4→11
+#include <Stepper.h>
+
+// 28BYJ-48: 2048 steps per full output revolution
+const int STEPS_PER_REV = 2048;
+
+// Stepper(steps, IN1, IN3, IN2, IN4) — library needs this order
+Stepper myStepper(STEPS_PER_REV, 8, 10, 9, 11);
+
+void setup() {
+  // Keep speed <= 15 RPM for 28BYJ-48 reliability
+  myStepper.setSpeed(10);
+  Serial.begin(9600);
+  Serial.println("Stepper ready!");
+}
+
+void loop() {
+  Serial.println("One revolution clockwise...");
+  myStepper.step(2048);   // positive = CW
+
+  delay(500);
+
+  Serial.println("Half revolution counter-clockwise...");
+  myStepper.step(-1024);  // negative = CCW
+
+  delay(500);
+
+  Serial.println("Quarter revolution clockwise...");
+  myStepper.step(512);
+
+  delay(1000);
+}
+`,
+    challenge: 'Calculate how many steps are needed to rotate exactly 45°. (Hint: 2048 steps = 360°, so 45° = ?) Write a function rotateDegrees(float deg) that takes any angle.',
+    validate(state) {
+      return state.serialUsed;
+    },
+  },
+
+  {
+    id: 'imu_sensor',
+    icon: '🔵',
+    title: 'IMU Accelerometer (MPU-6050)',
+    xp: 85,
+    difficulty: 'advanced',
+    desc: 'Read 3-axis accelerometer data from an MPU-6050 over I2C. Learn the Wire library, decode 16-bit sensor values with bit-shifting, and detect tilt direction.',
+    parts: ['Arduino Uno', 'MPU-6050 IMU module', 'Breadboard', 'Jumper wires'],
+    skills: ['Wire library', 'I2C protocol', 'Bit-shifting', 'Register maps', 'Sensor scaling'],
+    components: [{ type: 'imu' }],
+    wiring: [
+      'MPU-6050 VCC → 3.3V (some modules have onboard regulator: use 5V)',
+      'MPU-6050 GND → GND',
+      'MPU-6050 SDA → A4',
+      'MPU-6050 SCL → A5',
+      'MPU-6050 AD0 → GND  (I2C address = 0x68)',
+    ],
+    theory: `
+## What is an IMU?
+
+An **Inertial Measurement Unit** combines an accelerometer and gyroscope in one chip. The **MPU-6050** by InvenSense is one of the most popular 6-DOF IMUs for Arduino projects.
+
+### I2C on Arduino Uno
+
+| Signal | Arduino Pin |
+|--------|-------------|
+| SDA (data) | A4 |
+| SCL (clock) | A5 |
+
+Two wires, up to 127 devices on the same bus — each with a unique address.
+
+### MPU-6050 Register Map (Accel)
+
+| Register | Data |
+|----------|------|
+| 0x3B | AcX high byte |
+| 0x3C | AcX low byte |
+| 0x3D | AcY high byte |
+| 0x3E | AcY low byte |
+| 0x3F | AcZ high byte |
+| 0x40 | AcZ low byte |
+
+### Decoding 16-bit Values
+
+\`\`\`cpp
+int16_t AcX = (Wire.read() << 8) | Wire.read();
+//             high byte shift     low byte
+\`\`\`
+
+### Scaling to g-force
+
+Default range is ±2g → **16384 LSB per g**:
+
+\`\`\`cpp
+float gX = AcX / 16384.0;  // 0.0 = no accel, 1.0 = 1g
+\`\`\`
+
+When flat: X≈0g, Y≈0g, Z≈+1g (gravity pointing down).
+
+### Simulator
+Drag the **X**, **Y**, **Z** sliders on the IMU component. Center (512) = 0g. Full left = -1g. Full right = +1g. The Wire.requestFrom() call fills the read buffer automatically.
+    `,
+    starterCode: `// MPU-6050 Accelerometer via I2C
+// SDA→A4, SCL→A5, AD0→GND (address 0x68)
+#include <Wire.h>
+
+const int MPU_ADDR = 0x68;
+
+void setup() {
+  Wire.begin();
+
+  // Wake up the MPU-6050 (starts in sleep mode)
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x6B);  // PWR_MGMT_1 register
+  Wire.write(0);     // 0 = wake up, use internal oscillator
+  Wire.endTransmission(true);
+
+  Serial.begin(9600);
+  Serial.println("MPU-6050 ready!");
+  Serial.println("Move the X/Y/Z sliders to simulate tilt.");
+}
+
+void loop() {
+  // Set register pointer to accel data (0x3B)
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x3B);
+  Wire.endTransmission(false);  // false = repeated start
+
+  // Read 6 bytes: AcX_H, AcX_L, AcY_H, AcY_L, AcZ_H, AcZ_L
+  Wire.requestFrom(MPU_ADDR, 6, true);
+
+  int16_t AcX = (Wire.read() << 8) | Wire.read();
+  int16_t AcY = (Wire.read() << 8) | Wire.read();
+  int16_t AcZ = (Wire.read() << 8) | Wire.read();
+
+  // Scale: ±2g range → 16384 LSB/g
+  float gX = AcX / 16384.0;
+  float gY = AcY / 16384.0;
+  float gZ = AcZ / 16384.0;
+
+  Serial.print("X:"); Serial.print(gX, 2);
+  Serial.print("g  Y:"); Serial.print(gY, 2);
+  Serial.print("g  Z:"); Serial.print(gZ, 2);
+  Serial.print("g  ");
+
+  // Tilt detection
+  if (gX > 0.4)       Serial.println("→ Tilted RIGHT");
+  else if (gX < -0.4) Serial.println("← Tilted LEFT");
+  else if (gY > 0.4)  Serial.println("↑ Tilted FORWARD");
+  else if (gY < -0.4) Serial.println("↓ Tilted BACK");
+  else                Serial.println("✓ Level");
+
+  delay(300);
+}
+`,
+    challenge: 'Add gyroscope reading: after the accel request, request 6 more bytes from register 0x43 (GyX, GyY, GyZ high/low). Divide raw by 131.0 to get °/s (default ±250°/s range).',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('Tilt') || l.includes('Level') || l.includes('g'));
+    },
+  },
+
+  {
+    id: 'ir_remote',
+    icon: '📺',
+    title: 'IR Remote Control',
+    xp: 70,
+    difficulty: 'intermediate',
+    desc: 'Receive infrared signals from a TV remote and decode button hex codes. Use the IRremote library to make your Arduino react to different buttons.',
+    parts: ['Arduino Uno', 'VS1838B IR receiver module', 'Any NEC/Samsung remote', '1x LED', '220Ω resistor'],
+    skills: ['IRremote library', 'IR protocols', 'Hex codes', 'switch/case'],
+    components: [{ type: 'button', pin: 2 }],
+    wiring: [
+      'IR Receiver OUT → Pin 2',
+      'IR Receiver VCC → 5V',
+      'IR Receiver GND → GND',
+      'LED (+) → 220Ω → Pin 13, LED (-) → GND',
+    ],
+    theory: `
+## How IR Remote Control Works
+
+TV remotes flash an **infrared LED** at a carrier frequency (typically **38 kHz**). Data is encoded as pulse durations using a protocol like **NEC**:
+
+- **Start pulse:** 9 ms HIGH + 4.5 ms LOW
+- **Bit 0:** 562 µs HIGH + 562 µs LOW
+- **Bit 1:** 562 µs HIGH + 1687 µs LOW
+- **32-bit packet:** address (8-bit) + ~address + command (8-bit) + ~command
+
+The **VS1838B** receiver module demodulates the 38 kHz carrier and outputs a clean digital signal — no extra circuitry needed.
+
+### IRremote Library (v3.x)
+
+\`\`\`cpp
+#include <IRremote.h>
+
+const int IR_PIN = 2;
+IRrecv irrecv(IR_PIN);
+
+void setup() {
+  irrecv.enableIRIn();
+}
+
+void loop() {
+  if (irrecv.decode()) {
+    Serial.println(irrecv.decodedIRData.decodedRawData, HEX);
+    irrecv.resume();
+  }
+}
+\`\`\`
+
+### Finding Your Remote's Codes
+
+1. Upload the scanner sketch
+2. Open Serial Monitor
+3. Press each button and note its hex code
+4. Use those codes in a \`switch\` statement
+
+### Simulator Note
+
+The simulator uses a **push button on Pin 2** to simulate receiving IR codes. Each press cycles through different fake hex codes — simulating pressing different remote buttons.
+    `,
+    starterCode: `// IR Remote Control — Simulator version
+// Real HW: VS1838B receiver on Pin 2
+// Simulator: push the button to simulate IR codes
+
+const int IR_PIN  = 2;
+const int LED_PIN = 13;
+
+bool ledOn = false;
+// Simulated NEC codes (real codes vary by remote brand)
+const long CODE_POWER  = 0xFF02FD;
+const long CODE_VOL_UP = 0xFF18E7;
+const long CODE_VOL_DN = 0xFF4AB5;
+
+// Cycle through codes in simulator
+long codes[] = {CODE_POWER, CODE_VOL_UP, CODE_VOL_DN};
+int codeIdx = 0;
+
+void setup() {
+  pinMode(IR_PIN, INPUT_PULLUP);
+  pinMode(LED_PIN, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("IR Remote ready!");
+  Serial.println("Press button to simulate remote button presses.");
+  Serial.println("(Real HW: point remote at VS1838B on Pin 2)");
+}
+
+void handleCode(long code) {
+  Serial.print("Received: 0x");
+  Serial.println(code, HEX);
+
+  switch (code) {
+    case CODE_POWER:
+      ledOn = !ledOn;
+      digitalWrite(LED_PIN, ledOn);
+      Serial.println("  [POWER] LED toggled");
+      break;
+    case CODE_VOL_UP:
+      Serial.println("  [VOL+] (no action in this demo)");
+      break;
+    case CODE_VOL_DN:
+      Serial.println("  [VOL-] (no action in this demo)");
+      break;
+    default:
+      Serial.println("  [UNKNOWN] code not mapped");
+  }
+}
+
+void loop() {
+  // Simulator: button press = IR packet received
+  if (digitalRead(IR_PIN) == LOW) {
+    handleCode(codes[codeIdx]);
+    codeIdx = (codeIdx + 1) % 3;
+    delay(400);  // debounce
+  }
+}
+`,
+    challenge: 'Add a third action: when CODE_VOL_UP is received, blink the LED 3 times rapidly. Use a for loop with digitalWrite and short delays.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('Received') || l.includes('POWER') || l.includes('VOL'));
+    },
+  },
+
+  {
+    id: 'servo_potentiometer',
+    icon: '🎛️',
+    title: 'Servo + Potentiometer',
+    xp: 60,
+    difficulty: 'beginner',
+    desc: 'Control a servo motor\'s exact angle using a potentiometer. Learn the map() function to scale analog readings (0–1023) to servo angles (0°–180°) in real time.',
+    parts: ['Arduino Uno', 'SG90 servo motor', '10kΩ potentiometer', 'Breadboard', 'Jumper wires'],
+    skills: ['Servo library', 'map()', 'constrain()', 'analogRead()', 'Real-time feedback'],
+    components: [{ type: 'servo', pin: 9 }],
+    wiring: [
+      'Servo signal (orange/yellow) → Pin 9',
+      'Servo VCC (red) → 5V',
+      'Servo GND (brown/black) → GND',
+      'Potentiometer wiper (center) → A0',
+      'Potentiometer end 1 → 5V',
+      'Potentiometer end 2 → GND',
+    ],
+    theory: `
+## Servo Motors
+
+A servo motor holds a precise angular position based on a PWM pulse width:
+
+| Pulse width | Angle |
+|-------------|-------|
+| 1.0 ms | 0° |
+| 1.5 ms | 90° |
+| 2.0 ms | 180° |
+
+The Arduino **Servo** library generates the correct 50 Hz PWM signal automatically — just call \`myServo.write(angle)\`.
+
+## Potentiometer as an Angle Input
+
+A potentiometer is a variable voltage divider. Rotating it changes the wiper voltage from 0V to 5V, which \`analogRead()\` converts to **0–1023**.
+
+### The map() Function
+
+\`map()\` linearly scales one range to another:
+
+\`\`\`cpp
+int angle = map(potValue, 0, 1023, 0, 180);
+//               value   in-min in-max out-min out-max
+\`\`\`
+
+### constrain() for Safety
+
+Real potentiometers rarely hit exactly 0 or 1023. Use \`constrain()\` to clamp the angle:
+
+\`\`\`cpp
+angle = constrain(angle, 0, 180);
+\`\`\`
+
+### Wiring
+
+\`\`\`
+    Arduino       Servo             Pot
+    Pin 9  ─────  Signal (orange)
+    5V     ─────  VCC    (red)  ──  End 1
+    GND    ─────  GND    (brown) ── End 2
+    A0     ──────────────────────── Wiper
+\`\`\`
+
+### Simulator
+Drag the **A0 slider** to simulate turning the potentiometer. Watch the servo arm sweep in real time!
+    `,
+    starterCode: `// Servo + Potentiometer Control
+// Pot wiper → A0,  Servo signal → Pin 9
+#include <Servo.h>
+
+Servo myServo;
+
+const int POT_PIN   = A0;
+const int SERVO_PIN = 9;
+
+void setup() {
+  myServo.attach(SERVO_PIN);
+  Serial.begin(9600);
+  Serial.println("Servo + Pot ready!");
+  Serial.println("Move the A0 slider to control servo angle.");
+}
+
+void loop() {
+  int potVal = analogRead(POT_PIN);       // 0 to 1023
+  int angle  = map(potVal, 0, 1023, 0, 180);  // scale to degrees
+  angle = constrain(angle, 0, 180);       // safety clamp
+
+  myServo.write(angle);
+
+  Serial.print("Pot: ");
+  Serial.print(potVal);
+  Serial.print("  →  Angle: ");
+  Serial.print(angle);
+  Serial.println("°");
+
+  delay(20);  // ~50 updates/sec — smooth and responsive
+}
+`,
+    challenge: 'Limit the servo to only sweep between 30° and 150° regardless of pot position. Change the map() output range to 30–150 and update the constrain() limits to match.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('Angle') || l.includes('°'));
+    },
+  },
+
+  {
+    id: 'rotary_encoder',
+    icon: '🔁',
+    title: 'Rotary Encoder & Interrupts',
+    xp: 75,
+    difficulty: 'intermediate',
+    desc: 'Decode quadrature signals from a KY-040 rotary encoder using hardware interrupts. Track rotation direction and count, perfect for menus and position control.',
+    parts: ['Arduino Uno', 'KY-040 rotary encoder module', 'Breadboard', 'Jumper wires'],
+    skills: ['attachInterrupt()', 'volatile variables', 'ISR', 'Quadrature decoding', 'digitalPinToInterrupt()'],
+    components: [{ type: 'button', pin: 2 }, { type: 'button', pin: 3 }],
+    wiring: [
+      'KY-040 CLK → Pin 2 (INT0)',
+      'KY-040 DT  → Pin 3 (INT1)',
+      'KY-040 SW  → Pin 4 (push button)',
+      'KY-040 +   → 5V',
+      'KY-040 GND → GND',
+    ],
+    theory: `
+## Quadrature Encoding
+
+A rotary encoder has two output pins (**CLK** and **DT**) producing square waves 90° out of phase:
+
+\`\`\`
+Clockwise:               Counter-clockwise:
+CLK: ‾‾|__|‾‾|__         CLK: ‾‾|__|‾‾|__
+DT:  __|‾‾|__|‾‾         DT:  ‾‾|__|‾‾|__
+     ↑ CLK falls first        ↑ DT already LOW when CLK falls
+\`\`\`
+
+**Direction rule:** When CLK falls LOW:
+- If DT is **HIGH** → Clockwise (+1)
+- If DT is **LOW** → Counter-clockwise (-1)
+
+## Hardware Interrupts
+
+Polling \`digitalRead()\` in \`loop()\` can miss fast pulses. **Interrupts** let the CPU pause and run a special function (ISR) the instant a pin changes:
+
+\`\`\`cpp
+attachInterrupt(digitalPinToInterrupt(2), myISR, FALLING);
+//                  convert pin to INT#    function  trigger
+\`\`\`
+
+Arduino Uno interrupt pins: **2** (INT0) and **3** (INT1).
+
+## volatile Keyword
+
+Variables shared between the ISR and main code must be \`volatile\` — this tells the compiler not to cache the value in a register:
+
+\`\`\`cpp
+volatile int counter = 0;  // ISR and loop() both use this
+\`\`\`
+
+### Simulator
+- **Button on Pin 2** = CLK pulse (CW step)
+- **Button on Pin 3** = DT pulse (CCW step)
+
+Press them to simulate encoder rotation. On real hardware, one click of the knob generates one pulse.
+    `,
+    starterCode: `// Rotary Encoder with Hardware Interrupts
+// CLK→Pin 2 (INT0), DT→Pin 3 (INT1), SW→Pin 4
+// Simulator: Pin 2 button = CW step, Pin 3 button = CCW step
+
+const int CLK_PIN = 2;  // Interrupt pin (INT0)
+const int DT_PIN  = 3;  // Interrupt pin (INT1)
+const int SW_PIN  = 4;  // Push button (reset)
+
+volatile int  counter = 0;
+volatile bool newStep = false;
+volatile bool lastDir = true;  // true = CW
+
+// ISR: called when CLK falls
+void onCLK() {
+  if (digitalRead(DT_PIN) == HIGH) {
+    counter++;     // DT HIGH when CLK falls → CW
+    lastDir = true;
+  } else {
+    counter--;     // DT LOW when CLK falls → CCW
+    lastDir = false;
+  }
+  newStep = true;
+}
+
+// Simulator extra: DT button simulates direct CCW pulse
+void onDT() {
+  counter--;
+  lastDir = false;
+  newStep = true;
+}
+
+void setup() {
+  pinMode(CLK_PIN, INPUT_PULLUP);
+  pinMode(DT_PIN,  INPUT_PULLUP);
+  pinMode(SW_PIN,  INPUT_PULLUP);
+
+  // Attach interrupts — FALLING = trigger when pin goes LOW
+  attachInterrupt(digitalPinToInterrupt(CLK_PIN), onCLK, FALLING);
+  attachInterrupt(digitalPinToInterrupt(DT_PIN),  onDT,  FALLING);
+
+  Serial.begin(9600);
+  Serial.println("Rotary Encoder ready!");
+  Serial.println("Pin2=CW  Pin3=CCW  Pin4=Reset");
+}
+
+void loop() {
+  if (newStep) {
+    newStep = false;
+    Serial.print(lastDir ? "CW  " : "CCW ");
+    Serial.print("Counter: ");
+    Serial.println(counter);
+  }
+
+  // Push SW to reset counter
+  if (digitalRead(SW_PIN) == LOW) {
+    counter = 0;
+    Serial.println(">> Counter reset to 0");
+    delay(300);  // debounce
+  }
+}
+`,
+    challenge: 'Use the counter to dim an LED: map the counter (clamped 0–20) to PWM (0–255) on Pin 11. Use constrain() to keep the counter in range, then analogWrite() the LED brightness.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('Counter') || l.includes('CW') || l.includes('CCW'));
+    },
+  },
 ];
 
   </script>
@@ -6307,6 +7256,20 @@ class ArduinoTranspiler {
     js = js.replace(/\brandom\s*\(/g,   'sim.random(');
     js = js.replace(/\btone\s*\(/g,     'sim.tone(');
     js = js.replace(/\bnoTone\s*\(/g,   'sim.noTone(');
+    js = js.replace(/\bpulseIn\s*\(/g,  'await sim.pulseIn(');
+
+    // ── Wire (I2C) library stubs ──────────────────────────
+    js = js.replace(/Wire\.begin\s*\(/g,            'sim.wireBegin(');
+    js = js.replace(/Wire\.beginTransmission\s*\(/g,'sim.wireBeginTransmission(');
+    js = js.replace(/Wire\.write\s*\(/g,            'sim.wireWrite(');
+    js = js.replace(/Wire\.endTransmission\s*\(/g,  'sim.wireEndTransmission(');
+    js = js.replace(/Wire\.requestFrom\s*\(/g,      'sim.wireRequestFrom(');
+    js = js.replace(/Wire\.read\s*\(/g,             'sim.wireRead(');
+    js = js.replace(/Wire\.available\s*\(/g,        'sim.wireAvailable(');
+
+    // ── Stepper library ───────────────────────────────────
+    // "Stepper myStepper(steps, p1, p2, p3, p4);" → let myStepper = sim.createStepper(steps,p1,p2,p3,p4);
+    js = js.replace(/\bStepper\s+(\w+)\s*\(/g, 'let $1 = sim.createStepper(');
 
     // ── Math aliases ─────────────────────────────────────
     js = js.replace(/\babs\s*\(/g,   'Math.abs(');
@@ -6451,6 +7414,62 @@ class SimObject {
   noTone(pin) {
     this._board.showBuzzerActive(pin, 0, false);
   }
+
+  // ── pulseIn (ultrasonic echo simulation) ──────────────
+  async pulseIn(pin, level) {
+    const dist = this._board.getUltrasonicDist();
+    const us = Math.round(dist * 58); // ~58 µs per cm round trip
+    await this.delayMicroseconds(us);
+    return us;
+  }
+
+  // ── Wire (I2C) library stubs ──────────────────────────
+  wireBegin() {}
+  wireBeginTransmission(addr) { this._wireAddr = addr; }
+  wireWrite(b) { this._wireTxBuf = this._wireTxBuf || []; this._wireTxBuf.push(b); }
+  wireEndTransmission() { return 0; }
+  wireRequestFrom(addr, count) {
+    // Return simulated 6-byte accel packet (X,Y,Z 16-bit each) from analog sliders A0–A2
+    const mapVal = v => Math.round(((v / 1023) * 32768) - 16384);
+    const toBytes = v => { const n = v & 0xFFFF; return [(n >> 8) & 0xFF, n & 0xFF]; };
+    const ax = mapVal(this._board.getAnalog(0));
+    const ay = mapVal(this._board.getAnalog(1));
+    const az = mapVal(this._board.getAnalog(2));
+    this._wireRxBuf = [...toBytes(ax), ...toBytes(ay), ...toBytes(az)];
+    this._wireRxIdx = 0;
+    return count;
+  }
+  wireRead() {
+    if (!this._wireRxBuf || this._wireRxIdx >= this._wireRxBuf.length) return 0;
+    return this._wireRxBuf[this._wireRxIdx++];
+  }
+  wireAvailable() {
+    if (!this._wireRxBuf) return 0;
+    return Math.max(0, this._wireRxBuf.length - (this._wireRxIdx || 0));
+  }
+
+  // ── Stepper library stub ──────────────────────────────
+  createStepper(stepsPerRev, p1, p2, p3, p4) {
+    const board = this._board;
+    const pins = [p1, p2, p3, p4];
+    // 4-step full-step sequence: {IN1,IN2,IN3,IN4}
+    const seq = [[1,0,1,0],[0,1,1,0],[0,1,0,1],[1,0,0,1]];
+    let stepIdx = 0;
+    const applyStep = () => {
+      seq[stepIdx].forEach((v, i) => board.setDigital(pins[i], v));
+    };
+    return {
+      setSpeed(rpm) { /* visual only */ },
+      step(n) {
+        const dir = n > 0 ? 1 : -1;
+        const count = Math.abs(n);
+        for (let i = 0; i < count; i++) {
+          stepIdx = (stepIdx + dir + 4) % 4;
+          applyStep();
+        }
+      }
+    };
+  }
 }
 
 // ── ArduinoBoard — visual board + runner ──────────────────
@@ -6585,11 +7604,154 @@ class ArduinoBoard {
           </div>`;
         // Store pin mapping for RGB updates
         this._rgbPins = {r, g, b};
+      } else if (comp.type === 'ultrasonic') {
+        this._ultrasonicDist = 50; // default 50 cm
+        html += `
+          <div class="comp-item">
+            <div class="comp-ultrasonic" id="ultra-${comp.echoPin}">
+              <div class="ultra-icon">📡</div>
+              <div class="ultra-readout">
+                <span class="ultra-dist" id="ultra-dist-${comp.echoPin}">50</span>
+                <span class="ultra-cm">cm</span>
+              </div>
+              <input type="range" class="ultra-slider" id="ultra-slider-${comp.echoPin}"
+                min="2" max="400" value="50"
+                oninput="if(window._board)window._board.setUltrasonicDist(this.value,${comp.echoPin})" />
+            </div>
+            <div class="comp-label">HC-SR04 · Trig:${comp.trigPin} Echo:${comp.echoPin}</div>
+          </div>`;
+      } else if (comp.type === 'motor') {
+        this._motorPins = {enablePin: comp.enablePin, in1Pin: comp.in1Pin, in2Pin: comp.in2Pin};
+        html += `
+          <div class="comp-item">
+            <div class="comp-motor" id="motor-${comp.enablePin}">
+              <div class="motor-icon">⚙️</div>
+              <div class="motor-bar-bg">
+                <div class="motor-bar" id="motor-bar-${comp.enablePin}" style="width:0%"></div>
+              </div>
+              <div class="motor-stats">
+                <span class="motor-speed" id="motor-speed-${comp.enablePin}">0%</span>
+                <span class="motor-dir" id="motor-dir-${comp.enablePin}">Coast</span>
+              </div>
+            </div>
+            <div class="comp-label">DC Motor · EN:${comp.enablePin} IN1:${comp.in1Pin} IN2:${comp.in2Pin}</div>
+          </div>`;
+      } else if (comp.type === 'stepper') {
+        this._stepperPins = comp.pins;
+        this._stepperCount = 0;
+        html += `
+          <div class="comp-item">
+            <div class="comp-stepper" id="stepper-${comp.pins[0]}">
+              <div class="stepper-coils">
+                ${comp.pins.map((p, i) => `
+                  <div class="stepper-coil" id="stepper-coil-${comp.pins[0]}-${i}">
+                    <span>C${i+1}</span>
+                  </div>`).join('')}
+              </div>
+              <div class="stepper-info" id="stepper-step-${comp.pins[0]}">Step: 0</div>
+            </div>
+            <div class="comp-label">Stepper · Pins ${comp.pins.join(', ')}</div>
+          </div>`;
+      } else if (comp.type === 'imu') {
+        html += `
+          <div class="comp-item comp-imu-item">
+            <div class="comp-imu" id="comp-imu">
+              <div class="imu-title">🔵 IMU / Accel</div>
+              <div class="imu-rows">
+                <div class="imu-row">
+                  <span class="imu-axis x">X</span>
+                  <input type="range" class="imu-slider" min="0" max="1023" value="512"
+                    oninput="if(window._board){window._board.setAnalogSlider(0,this.value);window._board.updateIMUDisplay();}" />
+                  <span class="imu-val" id="imu-x-val">0°</span>
+                </div>
+                <div class="imu-row">
+                  <span class="imu-axis y">Y</span>
+                  <input type="range" class="imu-slider" min="0" max="1023" value="512"
+                    oninput="if(window._board){window._board.setAnalogSlider(1,this.value);window._board.updateIMUDisplay();}" />
+                  <span class="imu-val" id="imu-y-val">0°</span>
+                </div>
+                <div class="imu-row">
+                  <span class="imu-axis z">Z</span>
+                  <input type="range" class="imu-slider" min="0" max="1023" value="512"
+                    oninput="if(window._board){window._board.setAnalogSlider(2,this.value);window._board.updateIMUDisplay();}" />
+                  <span class="imu-val" id="imu-z-val">0°</span>
+                </div>
+              </div>
+            </div>
+            <div class="comp-label">IMU · I2C (SDA:A4 SCL:A5)</div>
+          </div>`;
       }
     });
 
     html += '</div>';
     el.innerHTML = html;
+  }
+
+  // ── Ultrasonic sensor ─────────────────────────────────
+  setUltrasonicDist(cm, echoPin) {
+    this._ultrasonicDist = parseInt(cm);
+    const lbl = document.getElementById(`ultra-dist-${echoPin}`);
+    if (lbl) lbl.textContent = cm;
+  }
+  getUltrasonicDist() { return this._ultrasonicDist || 50; }
+
+  // ── DC Motor display ──────────────────────────────────
+  _tryUpdateMotor(pin) {
+    if (!this._motorPins) return;
+    const mp = this._motorPins;
+    if (pin !== mp.enablePin && pin !== mp.in1Pin && pin !== mp.in2Pin) return;
+    const rawPwm = this._pins[mp.enablePin];
+    const speed = rawPwm?.pwm ?? (rawPwm?.digital ? 255 : 0);
+    const in1 = this._pins[mp.in1Pin]?.digital ?? 0;
+    const in2 = this._pins[mp.in2Pin]?.digital ?? 0;
+    const pct = Math.round((speed / 255) * 100);
+    let dir = 'Coast';
+    if (in1 && !in2)  dir = '▶ Fwd';
+    else if (!in1 && in2) dir = '◀ Rev';
+    else if (in1 && in2)  dir = '■ Brake';
+    const speedEl = document.getElementById(`motor-speed-${mp.enablePin}`);
+    const dirEl   = document.getElementById(`motor-dir-${mp.enablePin}`);
+    const barEl   = document.getElementById(`motor-bar-${mp.enablePin}`);
+    if (speedEl) speedEl.textContent = `${pct}%`;
+    if (dirEl)   dirEl.textContent   = dir;
+    if (barEl)   barEl.style.width   = `${pct}%`;
+    const motorEl = document.getElementById(`motor-${mp.enablePin}`);
+    if (motorEl) motorEl.classList.toggle('running', pct > 0);
+  }
+
+  // ── Stepper coil display ──────────────────────────────
+  _tryUpdateStepper(pin) {
+    if (!this._stepperPins || !this._stepperPins.includes(pin)) return;
+    const pins = this._stepperPins;
+    let changed = false;
+    pins.forEach((p, i) => {
+      const el = document.getElementById(`stepper-coil-${pins[0]}-${i}`);
+      const active = !!(this._pins[p]?.digital);
+      if (el) {
+        const was = el.classList.contains('active');
+        el.classList.toggle('active', active);
+        if (active && !was) changed = true;
+      }
+    });
+    if (changed) {
+      this._stepperCount = (this._stepperCount || 0) + 1;
+      const lbl = document.getElementById(`stepper-step-${pins[0]}`);
+      if (lbl) lbl.textContent = `Step: ${this._stepperCount}`;
+    }
+  }
+
+  // ── IMU display ───────────────────────────────────────
+  updateIMUDisplay() {
+    const toAngle = v => Math.round(((v - 512) / 512) * 90);
+    const x = toAngle(this._analog[0]);
+    const y = toAngle(this._analog[1]);
+    const z = toAngle(this._analog[2]);
+    const ex = document.getElementById('imu-x-val');
+    const ey = document.getElementById('imu-y-val');
+    const ez = document.getElementById('imu-z-val');
+    if (ex) ex.textContent = `${x}°`;
+    if (ey) ey.textContent = `${y}°`;
+    if (ez) ez.textContent = `${z}°`;
   }
 
   // ── Button control ────────────────────────────────────
@@ -6691,6 +7853,8 @@ class ArduinoBoard {
     this._pins[pin].digital = val;
     this._pins[pin].pwm = null;
     this._updatePinEl(pin, val, null);
+    this._tryUpdateMotor(pin);
+    this._tryUpdateStepper(pin);
   }
   setPWM(pin, val) {
     this._pins[pin] = this._pins[pin] || {};
@@ -6707,6 +7871,7 @@ class ArduinoBoard {
     if (this._rgbPins && (pin === this._rgbPins.r || pin === this._rgbPins.g || pin === this._rgbPins.b)) {
       this._updateRGBLed();
     }
+    this._tryUpdateMotor(pin);
   }
   getDigital(pin) {
     // Button with INPUT_PULLUP: pressed = LOW (0), released = HIGH (1)
@@ -6894,6 +8059,28 @@ class ArduinoBoard {
     this._components.forEach(c => {
       if (c.type === 'buzzer') this.showBuzzerActive(c.pin, 0, false);
     });
+    // Reset motor display
+    if (this._motorPins) {
+      const mp = this._motorPins;
+      const sEl = document.getElementById(`motor-speed-${mp.enablePin}`);
+      const dEl = document.getElementById(`motor-dir-${mp.enablePin}`);
+      const bEl = document.getElementById(`motor-bar-${mp.enablePin}`);
+      const mEl = document.getElementById(`motor-${mp.enablePin}`);
+      if (sEl) sEl.textContent = '0%';
+      if (dEl) dEl.textContent = 'Coast';
+      if (bEl) bEl.style.width = '0%';
+      if (mEl) mEl.classList.remove('running');
+    }
+    // Reset stepper display
+    if (this._stepperPins) {
+      this._stepperCount = 0;
+      const lbl = document.getElementById(`stepper-step-${this._stepperPins[0]}`);
+      if (lbl) lbl.textContent = 'Step: 0';
+      this._stepperPins.forEach((p, i) => {
+        const el = document.getElementById(`stepper-coil-${this._stepperPins[0]}-${i}`);
+        if (el) el.classList.remove('active');
+      });
+    }
     // Reset RGB
     this._rgbPins = this._rgbPins || null;
     const circle = document.getElementById('rgb-circle');
