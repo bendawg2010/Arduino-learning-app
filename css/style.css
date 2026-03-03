@@ -370,6 +370,20 @@ input, textarea { font-family: inherit; }
   background: none; color: var(--text); padding: 0;
   font-size: .82rem; line-height: 1.6;
 }
+.lesson-table {
+  width: 100%; border-collapse: collapse; font-size: .82rem;
+  margin: 10px 0 14px;
+}
+.lesson-table th, .lesson-table td {
+  border: 1px solid var(--border);
+  padding: 6px 10px; text-align: left;
+}
+.lesson-table th {
+  background: var(--surface3); color: var(--text);
+  font-weight: 600;
+}
+.lesson-table td { color: var(--text2); }
+.lesson-table tr:nth-child(even) td { background: var(--surface2); }
 .info-box {
   background: rgba(0,165,80,.07);
   border: 1px solid rgba(0,165,80,.22);

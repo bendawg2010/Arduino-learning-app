@@ -3,7 +3,96 @@
               Step-based guided lesson flow.
    ───────────────────────────────────────────────────────── */
 
-// ── State ──────────────────────────────────────────────────
+// ── Markdown → HTML (used for hardware lesson theory) ──────
+function md2html(md) {
+  if (!md) return '';
+  let s = md.trim();
+
+  // 1. Fenced code blocks (must be first)
+  s = s.replace(/```(?:\w*)\n([\s\S]*?)```/g, (_, code) =>
+    `<pre><code>${code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></pre>`);
+
+  // 2. Markdown tables
+  s = s.replace(/((?:\|[^\n]+\|\n?)+)/g, match => {
+    const rows = match.trim().split('\n').filter(l => !/^\|[-|: ]+\|$/.test(l.trim()));
+    if (!rows.length) return match;
+    return '<table class="lesson-table">' + rows.map((row, i) => {
+      const cells = row.split('|').slice(1, -1);
+      const tag = i === 0 ? 'th' : 'td';
+      return `<tr>${cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('')}</tr>`;
+    }).join('') + '</table>';
+  });
+
+  // 3. Blockquotes → info-box
+  s = s.replace(/^> (.+)$/gm, '<div class="info-box">$1</div>');
+
+  // 4. Headings
+  s = s.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  s = s.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+
+  // 5. Unordered lists
+  s = s.replace(/((?:^- .+\n?)+)/gm, m => {
+    const items = m.trim().split('\n').map(l => `<li>${l.slice(2)}</li>`).join('');
+    return `<ul>${items}</ul>`;
+  });
+
+  // 6. Inline bold + code
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+
+  // 7. Wrap bare text blocks in <p>
+  s = s.split(/\n{2,}/).map(block => {
+    block = block.trim();
+    if (!block) return '';
+    if (/^<[a-z]/.test(block)) return block;
+    return `<p>${block.replace(/\n/g, ' ')}</p>`;
+  }).join('\n');
+
+  return s;
+}
+
+// ── Auto-generate steps for hardware lessons (no steps array) ─
+function _buildHWSteps(lesson) {
+  const steps = [];
+
+  // Step 1: Theory + wiring
+  let learnHTML = lesson.theory ? md2html(lesson.theory) : `<p>${lesson.desc || ''}</p>`;
+  if (lesson.wiring && lesson.wiring.length) {
+    learnHTML += '<h3>🔌 Wiring</h3><ul>' +
+      lesson.wiring.map(w => `<li>${w}</li>`).join('') + '</ul>';
+  }
+  if (lesson.parts && lesson.parts.length) {
+    learnHTML += '<h3>🛒 Parts Needed</h3><ul>' +
+      lesson.parts.map(p => `<li>${p}</li>`).join('') + '</ul>';
+  }
+  steps.push({ type: 'learn', title: 'How It Works', icon: '📖', content: learnHTML });
+
+  // Step 2: Run the code
+  if (lesson.starterCode) {
+    steps.push({
+      type: 'run', title: 'Try It', icon: '▶',
+      content: '<p>Click <strong>▶ Run</strong> to test in the simulator, or upload to your Arduino.</p>',
+      code: lesson.starterCode,
+    });
+  }
+
+  // Step 3: Challenge
+  if (lesson.challenge) {
+    steps.push({
+      type: 'challenge', title: 'Challenge', icon: '🎯',
+      content: `<p>${lesson.challenge}</p>`,
+      code: lesson.starterCode || '',
+      hint: 'Check the wiring section and re-read the theory for clues.',
+      validate: lesson.validate || (() => false),
+    });
+  }
+
+  return steps.length ? steps :
+    [{ type: 'learn', title: lesson.title, icon: lesson.icon || '📖', content: `<p>${lesson.desc || ''}</p>` }];
+}
+
+// Apply to every lesson that has no steps array
+LESSONS.forEach(lesson => { if (!lesson.steps) lesson.steps = _buildHWSteps(lesson); });
 const DEFAULT_STATE = {
   xp: 0, level: 1,
   completedLessons: [], quizScores: {}, achievements: [],

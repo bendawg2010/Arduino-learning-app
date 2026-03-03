@@ -103,6 +103,17 @@ class ArduinoTranspiler {
     // ── DHT sensor library ────────────────────────────────
     js = js.replace(/\bDHT\s+(\w+)\s*\([^)]*\)\s*;/g, 'let $1 = sim.createDHT();');
 
+    // ── Arduino functions ─────────────────────────────────
+    js = js.replace(/\bshiftOut\s*\(/g, 'sim.shiftOut(');
+    js = js.replace(/\bisnan\s*\(/g,    'isNaN(');
+    js = js.replace(/\bbitRead\s*\(/g,  'sim.bitRead(');
+
+    // ── Constants ─────────────────────────────────────────
+    js = js.replace(/\bMSBFIRST\b/g, '1');
+    js = js.replace(/\bLSBFIRST\b/g, '0');
+    js = js.replace(/\bDHT11\b/g, '11');
+    js = js.replace(/\bDHT22\b/g, '22');
+
     // ── Math aliases ─────────────────────────────────────
     js = js.replace(/\babs\s*\(/g,   'Math.abs(');
     js = js.replace(/\bsqrt\s*\(/g,  'Math.sqrt(');
@@ -247,6 +258,22 @@ class SimObject {
     this._board.showBuzzerActive(pin, 0, false);
   }
 
+  // ── shiftOut ──────────────────────────────────────────
+  shiftOut(dataPin, clockPin, bitOrder, val) {
+    val = (val | 0) & 0xFF;
+    for (let i = 0; i < 8; i++) {
+      const bit = (bitOrder === 1) // MSBFIRST=1
+        ? (val >> (7 - i)) & 1
+        : (val >> i) & 1;
+      this._board.setDigital(dataPin, bit);
+      this._board.setDigital(clockPin, 1);
+      this._board.setDigital(clockPin, 0);
+    }
+  }
+
+  // ── Bit helpers ───────────────────────────────────────
+  bitRead(val, bit) { return (val >> bit) & 1; }
+
   // ── pulseIn (ultrasonic echo simulation) ──────────────
   async pulseIn(pin, level) {
     const dist = this._board.getUltrasonicDist();
@@ -354,7 +381,17 @@ class SimObject {
         // Map A1 slider (0-1023) to 20-90% RH
         return Math.round(20 + (board.getAnalog(1) / 1023) * 70);
       },
-      isnan(v) { return isNaN(v); },
+      computeHeatIndex(temp, hum, isFahrenheit) {
+        // Simplified Steadman formula
+        if (isFahrenheit === false) {
+          const t = temp * 9 / 5 + 32;
+          const hi = -42.379 + 2.04901523*t + 10.14333127*hum
+            - 0.22475541*t*hum - 0.00683783*t*t - 0.05481717*hum*hum
+            + 0.00122874*t*t*hum + 0.00085282*t*hum*hum - 0.00000199*t*t*hum*hum;
+          return Math.round((hi - 32) * 5 / 9 * 10) / 10;
+        }
+        return Math.round((temp + hum * 0.1) * 10) / 10;
+      },
     };
   }
 }

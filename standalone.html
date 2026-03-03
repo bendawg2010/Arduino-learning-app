@@ -381,6 +381,20 @@ input, textarea { font-family: inherit; }
   background: none; color: var(--text); padding: 0;
   font-size: .82rem; line-height: 1.6;
 }
+.lesson-table {
+  width: 100%; border-collapse: collapse; font-size: .82rem;
+  margin: 10px 0 14px;
+}
+.lesson-table th, .lesson-table td {
+  border: 1px solid var(--border);
+  padding: 6px 10px; text-align: left;
+}
+.lesson-table th {
+  background: var(--surface3); color: var(--text);
+  font-weight: 600;
+}
+.lesson-table td { color: var(--text2); }
+.lesson-table tr:nth-child(even) td { background: var(--surface2); }
 .info-box {
   background: rgba(0,165,80,.07);
   border: 1px solid rgba(0,165,80,.22);
@@ -8434,6 +8448,17 @@ class ArduinoTranspiler {
     // ── DHT sensor library ────────────────────────────────
     js = js.replace(/\bDHT\s+(\w+)\s*\([^)]*\)\s*;/g, 'let $1 = sim.createDHT();');
 
+    // ── Arduino functions ─────────────────────────────────
+    js = js.replace(/\bshiftOut\s*\(/g, 'sim.shiftOut(');
+    js = js.replace(/\bisnan\s*\(/g,    'isNaN(');
+    js = js.replace(/\bbitRead\s*\(/g,  'sim.bitRead(');
+
+    // ── Constants ─────────────────────────────────────────
+    js = js.replace(/\bMSBFIRST\b/g, '1');
+    js = js.replace(/\bLSBFIRST\b/g, '0');
+    js = js.replace(/\bDHT11\b/g, '11');
+    js = js.replace(/\bDHT22\b/g, '22');
+
     // ── Math aliases ─────────────────────────────────────
     js = js.replace(/\babs\s*\(/g,   'Math.abs(');
     js = js.replace(/\bsqrt\s*\(/g,  'Math.sqrt(');
@@ -8578,6 +8603,22 @@ class SimObject {
     this._board.showBuzzerActive(pin, 0, false);
   }
 
+  // ── shiftOut ──────────────────────────────────────────
+  shiftOut(dataPin, clockPin, bitOrder, val) {
+    val = (val | 0) & 0xFF;
+    for (let i = 0; i < 8; i++) {
+      const bit = (bitOrder === 1) // MSBFIRST=1
+        ? (val >> (7 - i)) & 1
+        : (val >> i) & 1;
+      this._board.setDigital(dataPin, bit);
+      this._board.setDigital(clockPin, 1);
+      this._board.setDigital(clockPin, 0);
+    }
+  }
+
+  // ── Bit helpers ───────────────────────────────────────
+  bitRead(val, bit) { return (val >> bit) & 1; }
+
   // ── pulseIn (ultrasonic echo simulation) ──────────────
   async pulseIn(pin, level) {
     const dist = this._board.getUltrasonicDist();
@@ -8685,7 +8726,17 @@ class SimObject {
         // Map A1 slider (0-1023) to 20-90% RH
         return Math.round(20 + (board.getAnalog(1) / 1023) * 70);
       },
-      isnan(v) { return isNaN(v); },
+      computeHeatIndex(temp, hum, isFahrenheit) {
+        // Simplified Steadman formula
+        if (isFahrenheit === false) {
+          const t = temp * 9 / 5 + 32;
+          const hi = -42.379 + 2.04901523*t + 10.14333127*hum
+            - 0.22475541*t*hum - 0.00683783*t*t - 0.05481717*hum*hum
+            + 0.00122874*t*t*hum + 0.00085282*t*hum*hum - 0.00000199*t*t*hum*hum;
+          return Math.round((hi - 32) * 5 / 9 * 10) / 10;
+        }
+        return Math.round((temp + hum * 0.1) * 10) / 10;
+      },
     };
   }
 }
@@ -9361,7 +9412,96 @@ class ArduinoBoard {
               Step-based guided lesson flow.
    ───────────────────────────────────────────────────────── */
 
-// ── State ──────────────────────────────────────────────────
+// ── Markdown → HTML (used for hardware lesson theory) ──────
+function md2html(md) {
+  if (!md) return '';
+  let s = md.trim();
+
+  // 1. Fenced code blocks (must be first)
+  s = s.replace(/```(?:\w*)\n([\s\S]*?)```/g, (_, code) =>
+    `<pre><code>${code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></pre>`);
+
+  // 2. Markdown tables
+  s = s.replace(/((?:\|[^\n]+\|\n?)+)/g, match => {
+    const rows = match.trim().split('\n').filter(l => !/^\|[-|: ]+\|$/.test(l.trim()));
+    if (!rows.length) return match;
+    return '<table class="lesson-table">' + rows.map((row, i) => {
+      const cells = row.split('|').slice(1, -1);
+      const tag = i === 0 ? 'th' : 'td';
+      return `<tr>${cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('')}</tr>`;
+    }).join('') + '</table>';
+  });
+
+  // 3. Blockquotes → info-box
+  s = s.replace(/^> (.+)$/gm, '<div class="info-box">$1</div>');
+
+  // 4. Headings
+  s = s.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  s = s.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+
+  // 5. Unordered lists
+  s = s.replace(/((?:^- .+\n?)+)/gm, m => {
+    const items = m.trim().split('\n').map(l => `<li>${l.slice(2)}</li>`).join('');
+    return `<ul>${items}</ul>`;
+  });
+
+  // 6. Inline bold + code
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+
+  // 7. Wrap bare text blocks in <p>
+  s = s.split(/\n{2,}/).map(block => {
+    block = block.trim();
+    if (!block) return '';
+    if (/^<[a-z]/.test(block)) return block;
+    return `<p>${block.replace(/\n/g, ' ')}</p>`;
+  }).join('\n');
+
+  return s;
+}
+
+// ── Auto-generate steps for hardware lessons (no steps array) ─
+function _buildHWSteps(lesson) {
+  const steps = [];
+
+  // Step 1: Theory + wiring
+  let learnHTML = lesson.theory ? md2html(lesson.theory) : `<p>${lesson.desc || ''}</p>`;
+  if (lesson.wiring && lesson.wiring.length) {
+    learnHTML += '<h3>🔌 Wiring</h3><ul>' +
+      lesson.wiring.map(w => `<li>${w}</li>`).join('') + '</ul>';
+  }
+  if (lesson.parts && lesson.parts.length) {
+    learnHTML += '<h3>🛒 Parts Needed</h3><ul>' +
+      lesson.parts.map(p => `<li>${p}</li>`).join('') + '</ul>';
+  }
+  steps.push({ type: 'learn', title: 'How It Works', icon: '📖', content: learnHTML });
+
+  // Step 2: Run the code
+  if (lesson.starterCode) {
+    steps.push({
+      type: 'run', title: 'Try It', icon: '▶',
+      content: '<p>Click <strong>▶ Run</strong> to test in the simulator, or upload to your Arduino.</p>',
+      code: lesson.starterCode,
+    });
+  }
+
+  // Step 3: Challenge
+  if (lesson.challenge) {
+    steps.push({
+      type: 'challenge', title: 'Challenge', icon: '🎯',
+      content: `<p>${lesson.challenge}</p>`,
+      code: lesson.starterCode || '',
+      hint: 'Check the wiring section and re-read the theory for clues.',
+      validate: lesson.validate || (() => false),
+    });
+  }
+
+  return steps.length ? steps :
+    [{ type: 'learn', title: lesson.title, icon: lesson.icon || '📖', content: `<p>${lesson.desc || ''}</p>` }];
+}
+
+// Apply to every lesson that has no steps array
+LESSONS.forEach(lesson => { if (!lesson.steps) lesson.steps = _buildHWSteps(lesson); });
 const DEFAULT_STATE = {
   xp: 0, level: 1,
   completedLessons: [], quizScores: {}, achievements: [],
