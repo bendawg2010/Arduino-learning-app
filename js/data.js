@@ -23,7 +23,7 @@ const ACHIEVEMENTS = [
   { id: 'blink_master',    icon: '💡', name: 'Blink Master',    desc: 'Complete the Blink lesson.',                        cond: s => s.completedLessons.includes('blink')  },
   { id: 'quiz_ace',        icon: '🎯', name: 'Quiz Ace',        desc: 'Answer a quiz question correctly.',                 cond: s => Object.values(s.quizScores).some(v => v >= 100)  },
   { id: 'five_lessons',    icon: '🔥', name: 'On Fire',         desc: 'Complete 5 lessons.',                               cond: s => s.completedLessons.length >= 5  },
-  { id: 'all_lessons',     icon: '🎓', name: 'Graduate',        desc: 'Complete all 21 lessons.',                          cond: s => s.completedLessons.length >= 21 },
+  { id: 'all_lessons',     icon: '🎓', name: 'Graduate',        desc: 'Complete all 31 lessons.',                          cond: s => s.completedLessons.length >= 31 },
   { id: 'serial_user',     icon: '📡', name: 'Talker',          desc: 'Use Serial.println() in your code.',                cond: s => s.serialUsed  },
   { id: 'pwm_user',        icon: '🌈', name: 'Fader',           desc: 'Use analogWrite() for PWM.',                        cond: s => s.pwmUsed     },
   { id: 'first_challenge', icon: '💪', name: 'Challenger',      desc: 'Pass your first challenge.',                        cond: s => s.challengesPassed >= 1  },
@@ -3066,6 +3066,1482 @@ void loop() {
         ],
         correct: 2,
         explain: '"Fall-through" means execution continues into the next case without stopping. This is sometimes intentional (to share code between cases) but is usually a bug. Always add break; unless you specifically want fall-through!',
+      },
+    ],
+  },
+
+  // ── 22. Debouncing ───────────────────────────────────────
+  {
+    id: 'debouncing', title: 'Debouncing Buttons', icon: '🔧',
+    difficulty: 'intermediate', xp: 70,
+    desc: 'Fix "bouncy" button reads that cause multiple triggers from a single press.',
+    components: [{ type: 'button', pin: 2 }],
+    steps: [
+      {
+        type: 'learn', title: 'Why Buttons "Bounce"', icon: '🔧',
+        content: `
+<h2>The Hidden Problem with Buttons</h2>
+<p>Here's something surprising: when you press a physical button, it doesn't just go from OFF to ON cleanly. The metal contacts inside physically <em>bounce</em> against each other for a few milliseconds, creating a rapid series of ON-OFF-ON-OFF signals before settling.</p>
+<div class="info-box warn">
+  ⚠️ Without debouncing, one button press might be read as 3, 5, or even 10 presses! Imagine a counter that jumps from 0 to 5 on a single click — that's button bounce.
+</div>
+<p>In the simulator this is less visible, but on real hardware it's a real problem. Learning to debounce is essential for any project with buttons.</p>
+<p>There are two main solutions:</p>
+<ul>
+  <li><strong>Hardware debouncing</strong> — add a capacitor to the circuit</li>
+  <li><strong>Software debouncing</strong> — use code to ignore rapid changes (free!)</li>
+</ul>
+<p>We'll use software debouncing with <code>millis()</code>.</p>`,
+      },
+      {
+        type: 'learn', title: 'The Debounce Technique', icon: '⏱️',
+        content: `
+<h2>Software Debounce with millis()</h2>
+<p>The idea: when the button state changes, <strong>wait a short time</strong> (usually 20-50ms) and only accept the new state if it's still the same after that delay.</p>
+<div class="info-box">
+<pre><code>int btnPin = 2;
+int lastStableState = HIGH;
+int lastRawState    = HIGH;
+unsigned long lastChangeTime = 0;
+const int DEBOUNCE_DELAY = 30;  // ms
+
+void loop() {
+  int rawState = digitalRead(btnPin);
+
+  if (rawState != lastRawState) {
+    lastChangeTime = millis();  // Button state changed — start timer
+    lastRawState = rawState;
+  }
+
+  if (millis() - lastChangeTime > DEBOUNCE_DELAY) {
+    // State has been stable for 30ms — it's real!
+    if (rawState != lastStableState) {
+      lastStableState = rawState;
+      if (rawState == LOW) {
+        // A genuine button press!
+      }
+    }
+  }
+}</code></pre>
+</div>
+<p>This filters out the rapid bouncing because bounces happen in microseconds — much shorter than our 30ms window!</p>`,
+        code: `int btnPin = 2;
+int lastStableState = HIGH;
+int lastRawState    = HIGH;
+unsigned long lastChangeTime = 0;
+const int DEBOUNCE_DELAY = 30;
+int pressCount = 0;
+
+void setup() {
+  pinMode(btnPin, INPUT_PULLUP);
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Debounced button ready!");
+}
+
+void loop() {
+  int rawState = digitalRead(btnPin);
+
+  if (rawState != lastRawState) {
+    lastChangeTime = millis();
+    lastRawState = rawState;
+  }
+
+  if (millis() - lastChangeTime > DEBOUNCE_DELAY) {
+    if (rawState != lastStableState) {
+      lastStableState = rawState;
+      if (rawState == LOW) {
+        pressCount++;
+        Serial.print("Debounced press #");
+        Serial.println(pressCount);
+        digitalWrite(13, HIGH); delay(100); digitalWrite(13, LOW);
+      }
+    }
+  }
+}`,
+      },
+      {
+        type: 'run', title: 'Press the Button!', icon: '▶',
+        content: `
+<h2>Test the Debounced Button</h2>
+<p>Click <strong>▶ Run</strong>, then <strong>click the button</strong> in the simulator. Each click should count as exactly ONE press!</p>
+<div class="info-box tip">
+  💡 In real hardware, an un-debounced button might count 3-10 presses per physical click. With software debouncing, you always get exactly 1 per press.
+</div>
+<p>The Serial Monitor shows the count. Try clicking quickly several times and see how accurate the count is!</p>`,
+        code: `int btnPin = 2;
+int lastStableState = HIGH;
+int lastRawState    = HIGH;
+unsigned long lastChangeTime = 0;
+const int DEBOUNCE_DELAY = 30;
+int pressCount = 0;
+
+void setup() {
+  pinMode(btnPin, INPUT_PULLUP);
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Click the button!");
+}
+
+void loop() {
+  int rawState = digitalRead(btnPin);
+  if (rawState != lastRawState) {
+    lastChangeTime = millis();
+    lastRawState = rawState;
+  }
+  if (millis() - lastChangeTime > DEBOUNCE_DELAY) {
+    if (rawState != lastStableState) {
+      lastStableState = rawState;
+      if (rawState == LOW) {
+        pressCount++;
+        Serial.print("Press #");
+        Serial.println(pressCount);
+        digitalWrite(13, HIGH);
+        delay(80);
+        digitalWrite(13, LOW);
+      }
+    }
+  }
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Reliable Counter', icon: '🎯',
+        content: `
+<h2>🎯 Challenge: Debounced Press Counter</h2>
+<p>Write a debounced button sketch. Your code must use:</p>
+<ul>
+  <li><code>millis()</code> for timing (not delay)</li>
+  <li>A debounce window of at least 20ms</li>
+  <li>A counter that only increments once per real press</li>
+  <li><code>Serial.println</code> to print the count</li>
+</ul>`,
+        code: `int lastRawState    = HIGH;
+int lastStableState = HIGH;
+unsigned long lastChangeTime = 0;
+int pressCount = 0;
+
+void setup() {
+  pinMode(2, INPUT_PULLUP);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int raw = digitalRead(2);
+
+  // Add debounce logic here!
+  // When a stable press is detected, increment pressCount
+  // and Serial.println it
+
+}`,
+        validate: (code, _sim) => {
+          return /millis\s*\(\s*\)/.test(code) &&
+                 /digitalRead\s*\(\s*2\s*\)/.test(code) &&
+                 /Serial\.println/.test(code) &&
+                 /\+\+|count\s*[+]=/.test(code);
+        },
+        hint: 'if (raw != lastRawState) { lastChangeTime = millis(); lastRawState = raw; } if (millis() - lastChangeTime > 25 && raw != lastStableState) { lastStableState = raw; if (raw == LOW) { pressCount++; Serial.println(pressCount); } }',
+      },
+    ],
+  },
+
+  // ── 23. LED Chaser ───────────────────────────────────────
+  {
+    id: 'led_chaser', title: 'LED Chaser Effect', icon: '✨',
+    difficulty: 'intermediate', xp: 65,
+    desc: 'Create a running light effect across multiple LEDs using arrays and loops.',
+    steps: [
+      {
+        type: 'learn', title: 'Running Lights with Arrays', icon: '✨',
+        content: `
+<h2>The LED Chaser — Arrays + Loops in Action</h2>
+<p>A <strong>LED chaser</strong> (also called a "running light" or "Knight Rider effect") lights up LEDs one at a time in sequence, creating the illusion of movement.</p>
+<p>This is a perfect example of arrays and loops working together. Without them, controlling 5 LEDs would need 50+ lines of code. With them, it's just a few!</p>
+<div class="info-box">
+  <strong>The plan:</strong><br>
+  1. Store all LED pin numbers in an array<br>
+  2. Use a for loop to turn each one on, pause, then off<br>
+  3. Loop forward, then backward for the full effect
+</div>
+<p>We'll use pins 9, 10, 11, 12, and 13 in the simulator. In real hardware you'd wire up 5 actual LEDs!</p>`,
+        code: `int leds[] = {9, 10, 11, 12, 13};  // Our 5 LED pins
+int numLeds = 5;
+int speed = 100;  // ms between each LED
+
+void setup() {
+  for (int i = 0; i < numLeds; i++) {
+    pinMode(leds[i], OUTPUT);
+  }
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Chase forward
+  for (int i = 0; i < numLeds; i++) {
+    digitalWrite(leds[i], HIGH);
+    Serial.print("LED "); Serial.print(i+1); Serial.println(" ON");
+    delay(speed);
+    digitalWrite(leds[i], LOW);
+  }
+  // Chase backward
+  for (int i = numLeds - 1; i >= 0; i--) {
+    digitalWrite(leds[i], HIGH);
+    delay(speed);
+    digitalWrite(leds[i], LOW);
+  }
+}`,
+      },
+      {
+        type: 'run', title: 'Watch the Chaser!', icon: '▶',
+        content: `
+<h2>See the Running Light!</h2>
+<p>Click <strong>▶ Run</strong> and watch pins 9-13 light up one at a time! The Serial Monitor shows each step.</p>
+<div class="info-box tip">
+  💡 Try changing <code>speed = 100</code> to <code>speed = 50</code> for a faster chase, or <code>speed = 300</code> for slow and dramatic!
+</div>`,
+        code: `int leds[] = {9, 10, 11, 12, 13};
+int numLeds = 5;
+int speed = 100;
+
+void setup() {
+  for (int i = 0; i < numLeds; i++) {
+    pinMode(leds[i], OUTPUT);
+  }
+  Serial.begin(9600);
+  Serial.println("LED Chaser running!");
+}
+
+void loop() {
+  for (int i = 0; i < numLeds; i++) {
+    digitalWrite(leds[i], HIGH);
+    delay(speed);
+    digitalWrite(leds[i], LOW);
+  }
+  for (int i = numLeds - 1; i >= 0; i--) {
+    digitalWrite(leds[i], HIGH);
+    delay(speed);
+    digitalWrite(leds[i], LOW);
+  }
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Bouncing Light', icon: '🎯',
+        content: `
+<h2>🎯 Challenge: Bouncing Chaser</h2>
+<p>Create an LED chaser using an array of at least <strong>3 pins</strong>. It must go forward AND backward (bounce back and forth).</p>
+<ul>
+  <li>Declare an <code>int</code> array with at least 3 pin numbers</li>
+  <li>Use a <code>for</code> loop going forward (0 to last)</li>
+  <li>Use a <code>for</code> loop going backward (last to 0)</li>
+  <li>Each LED should be on briefly then off before moving to the next</li>
+</ul>`,
+        code: `int leds[] = {11, 12, 13};  // Add more pins if you like!
+int numLeds = 3;
+
+void setup() {
+  for (int i = 0; i < numLeds; i++) {
+    pinMode(leds[i], OUTPUT);
+  }
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Forward chase here
+
+  // Backward chase here
+
+}`,
+        validate: (code, _sim) => {
+          const hasArray = /int\s+\w+\s*\[\s*\]\s*=\s*\{/.test(code);
+          const forLoops = (code.match(/\bfor\s*\(/g) || []).length;
+          const hasWrite = /digitalWrite/.test(code);
+          return hasArray && forLoops >= 2 && hasWrite;
+        },
+        hint: 'Forward: for (int i = 0; i < numLeds; i++) { digitalWrite(leds[i], HIGH); delay(100); digitalWrite(leds[i], LOW); }   Backward: for (int i = numLeds-1; i >= 0; i--) { same code }',
+      },
+      {
+        type: 'quiz', title: 'Quick Check', icon: '❓',
+        content: '',
+        q: 'In "int leds[] = {9, 10, 11}", what is leds[2]?',
+        opts: ['9', '10', '11', 'Error — out of range'],
+        correct: 2,
+        explain: 'Arrays are zero-indexed: leds[0]=9, leds[1]=10, leds[2]=11. Index 2 is the third element.',
+      },
+    ],
+  },
+
+  // ── 24. Light Meter ──────────────────────────────────────
+  {
+    id: 'light_meter', title: 'Light Meter & Thresholds', icon: '☀️',
+    difficulty: 'beginner', xp: 55,
+    desc: 'Read a light sensor and trigger different behaviors at different brightness levels.',
+    steps: [
+      {
+        type: 'learn', title: 'Reading a Light Sensor', icon: '☀️',
+        content: `
+<h2>Sensing Light with an LDR</h2>
+<p>A <strong>Light Dependent Resistor (LDR)</strong> — also called a photoresistor — changes its resistance based on how much light hits it. In bright light, resistance drops. In darkness, resistance rises.</p>
+<p>Connect one to the Arduino's analog pin and <code>analogRead()</code> gives you a value:</p>
+<div class="info-box">
+  🌑 <strong>Dark room</strong> → high resistance → low voltage → analogRead gives ~0–200<br>
+  ☀️ <strong>Bright light</strong> → low resistance → high voltage → analogRead gives ~800–1023
+</div>
+<p>In our simulator, the <strong>A0 slider</strong> represents the light level. Drag it left for dark, right for bright!</p>
+<p>We can use thresholds to decide what to do:</p>
+<div class="info-box tip">
+  <code>if (light < 300)</code> → It's dark, turn on the LED<br>
+  <code>else if (light < 700)</code> → Medium, dim the LED<br>
+  <code>else</code> → Bright, turn LED off
+</div>`,
+        code: `void setup() {
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Light meter ready!");
+}
+
+void loop() {
+  int light = analogRead(A0);  // 0 = dark, 1023 = bright
+
+  Serial.print("Light level: ");
+  Serial.print(light);
+
+  if (light < 300) {
+    Serial.println(" → DARK — LED ON");
+    digitalWrite(13, HIGH);
+  } else if (light < 700) {
+    Serial.println(" → DIM — LED off");
+    digitalWrite(13, LOW);
+  } else {
+    Serial.println(" → BRIGHT — LED off");
+    digitalWrite(13, LOW);
+  }
+
+  delay(400);
+}`,
+      },
+      {
+        type: 'run', title: 'Drag the Light Slider!', icon: '▶',
+        content: `
+<h2>Control the Light Level!</h2>
+<p>Click <strong>▶ Run</strong>, then drag the <strong>A0 slider</strong> in the simulator left (dark) and right (bright). Watch the LED and Serial Monitor respond!</p>
+<div class="info-box tip">
+  💡 This is exactly how automatic street lights work — a light sensor reads brightness, and when it gets dark enough, the lights turn on automatically!
+</div>`,
+        code: `void setup() {
+  pinMode(9, OUTPUT);   // PWM pin for dimming
+  pinMode(13, OUTPUT);  // On/off LED
+  Serial.begin(9600);
+}
+
+void loop() {
+  int light = analogRead(A0);
+  int brightness = map(light, 0, 1023, 255, 0);  // Invert: dark=bright LED
+
+  analogWrite(9, brightness);  // Dim LED inversely to light
+
+  if (light < 300) {
+    digitalWrite(13, HIGH);
+    Serial.println("DARK: lights on!");
+  } else {
+    digitalWrite(13, LOW);
+    Serial.print("Light: "); Serial.println(light);
+  }
+
+  delay(200);
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Three-Level Light Meter', icon: '🎯',
+        content: `
+<h2>🎯 Challenge: Three Brightness Zones</h2>
+<p>Write a sketch that reads <code>analogRead(A0)</code> and prints a different message for 3 light zones:</p>
+<ul>
+  <li>0–340: print <code>"Zone: DARK"</code> and turn LED on</li>
+  <li>341–680: print <code>"Zone: DIM"</code> and turn LED off</li>
+  <li>681–1023: print <code>"Zone: BRIGHT"</code> and turn LED off</li>
+</ul>`,
+        code: `void setup() {
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int light = analogRead(A0);
+
+  // Add your three-zone if/else if/else here!
+
+  delay(300);
+}`,
+        validate: (code, _sim) => {
+          return /analogRead/.test(code) &&
+                 /else\s+if/.test(code) &&
+                 /DARK/.test(code) && /BRIGHT/.test(code) &&
+                 /Serial\.println/.test(code);
+        },
+        hint: 'if (light <= 340) { Serial.println("Zone: DARK"); digitalWrite(13,HIGH); } else if (light <= 680) { Serial.println("Zone: DIM"); digitalWrite(13,LOW); } else { Serial.println("Zone: BRIGHT"); digitalWrite(13,LOW); }',
+      },
+    ],
+  },
+
+  // ── 25. Reaction Game ────────────────────────────────────
+  {
+    id: 'reaction_game', title: 'Reaction Time Game', icon: '⚡',
+    difficulty: 'advanced', xp: 85,
+    desc: 'Build a game that measures how fast you can press a button after an LED lights up.',
+    components: [{ type: 'button', pin: 2 }],
+    steps: [
+      {
+        type: 'learn', title: 'How the Game Works', icon: '⚡',
+        content: `
+<h2>Building Your First Game!</h2>
+<p>Here's the plan for our reaction time game:</p>
+<ol>
+  <li>Arduino waits a random amount of time</li>
+  <li>LED turns ON — this is your signal!</li>
+  <li>Player presses the button as fast as possible</li>
+  <li>Arduino measures how many milliseconds passed</li>
+  <li>Print the reaction time to Serial</li>
+</ol>
+<p>We'll need a few new tools:</p>
+<div class="info-box">
+  <code>random(min, max)</code> — returns a random number between min and max-1<br>
+  Example: <code>random(2000, 5000)</code> → random number from 2000 to 4999
+</div>
+<div class="info-box tip" style="margin-top:8px">
+  <code>millis()</code> — we'll record the time when the LED turns on, then calculate elapsed time when the button is pressed
+</div>
+<p>The game uses a <strong>state machine</strong>: the program is either WAITING (LED off, waiting to start) or READY (LED on, waiting for button press).</p>`,
+        code: `// States
+int STATE_WAITING = 0;
+int STATE_READY   = 1;
+int gameState = STATE_WAITING;
+
+unsigned long ledOnTime = 0;
+
+void setup() {
+  pinMode(13, OUTPUT);
+  pinMode(2, INPUT_PULLUP);
+  Serial.begin(9600);
+  randomSeed(analogRead(A1));  // Seed random with noise
+  Serial.println("Reaction Game Ready!");
+  Serial.println("Watch for the LED, then press the button!");
+}
+
+void loop() {
+  if (gameState == STATE_WAITING) {
+    // Wait a random time, then turn on LED
+    unsigned long waitTime = random(2000, 5000);
+    Serial.print("Get ready... (waiting ");
+    Serial.print(waitTime / 1000.0, 1);
+    Serial.println("s)");
+    delay(waitTime);  // Suspense!
+    digitalWrite(13, HIGH);
+    ledOnTime = millis();
+    gameState = STATE_READY;
+    Serial.println("NOW! Press the button!");
+  }
+
+  if (gameState == STATE_READY) {
+    if (digitalRead(2) == LOW) {
+      unsigned long reaction = millis() - ledOnTime;
+      digitalWrite(13, LOW);
+      Serial.print("Reaction time: ");
+      Serial.print(reaction);
+      Serial.println(" ms!");
+      if (reaction < 200) Serial.println("AMAZING! 🏆");
+      else if (reaction < 400) Serial.println("Great! 👍");
+      else Serial.println("Keep practicing!");
+      delay(1500);
+      gameState = STATE_WAITING;
+    }
+  }
+}`,
+      },
+      {
+        type: 'run', title: 'Play the Game!', icon: '▶',
+        content: `
+<h2>Test Your Reflexes!</h2>
+<p>Click <strong>▶ Run</strong>. The sketch will:</p>
+<ol>
+  <li>Wait a random 2-5 seconds (watch the Serial Monitor for the countdown)</li>
+  <li>Turn on the LED — press the button IMMEDIATELY!</li>
+  <li>Print your reaction time in milliseconds</li>
+</ol>
+<div class="info-box tip">
+  💡 Average human reaction time is around 200-300ms. Under 200ms is exceptional! Pro gamers average ~150ms.
+</div>
+<p>Click the <strong>PUSH button</strong> in the simulator as fast as you can after the LED lights up!</p>`,
+        code: `int gameState = 0;  // 0=waiting, 1=ready
+unsigned long ledOnTime = 0;
+
+void setup() {
+  pinMode(13, OUTPUT);
+  pinMode(2, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("=== REACTION GAME ===");
+  Serial.println("Watch for the LED, then hit the button!");
+  delay(1000);
+}
+
+void loop() {
+  if (gameState == 0) {
+    int waitSecs = random(2, 5);
+    Serial.print("Waiting ");
+    Serial.print(waitSecs);
+    Serial.println(" seconds...");
+    delay(waitSecs * 1000);
+    digitalWrite(13, HIGH);
+    ledOnTime = millis();
+    gameState = 1;
+    Serial.println(">>> GO! Press the button! <<<");
+  }
+
+  if (gameState == 1 && digitalRead(2) == LOW) {
+    long reaction = millis() - ledOnTime;
+    digitalWrite(13, LOW);
+    Serial.print("Your time: ");
+    Serial.print(reaction);
+    Serial.println("ms");
+    if (reaction < 200)      Serial.println("INCREDIBLE! 🏆");
+    else if (reaction < 350) Serial.println("Great! 👍");
+    else if (reaction < 600) Serial.println("Not bad!");
+    else                     Serial.println("Keep practicing!");
+    delay(2000);
+    gameState = 0;
+  }
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Add a Cheat Detector', icon: '🎯',
+        content: `
+<h2>🎯 Challenge: No Cheating!</h2>
+<p>Extend the reaction game to detect if the player <strong>presses the button before the LED turns on</strong> (cheating!). If they press too early, print "CHEATED!" and restart.</p>
+<ul>
+  <li>During the waiting phase, check if button is pressed</li>
+  <li>If pressed early: print "Too early! Cheater!" and reset</li>
+  <li>If pressed after LED: normal reaction time display</li>
+</ul>`,
+        code: `int gameState = 0;
+unsigned long ledOnTime = 0;
+
+void setup() {
+  pinMode(13, OUTPUT);
+  pinMode(2, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("No cheating allowed!");
+}
+
+void loop() {
+  if (gameState == 0) {
+    // Waiting phase — check for cheating!
+    int wait = random(2000, 4000);
+    unsigned long start = millis();
+    while (millis() - start < wait) {
+      // Add cheat detection here!
+      // If button pressed during wait → cheat!
+    }
+    // Turn LED on
+    digitalWrite(13, HIGH);
+    ledOnTime = millis();
+    gameState = 1;
+  }
+
+  if (gameState == 1 && digitalRead(2) == LOW) {
+    long t = millis() - ledOnTime;
+    digitalWrite(13, LOW);
+    Serial.print("Time: "); Serial.print(t); Serial.println("ms");
+    delay(1500);
+    gameState = 0;
+  }
+}`,
+        validate: (code, _sim) => {
+          return /cheat|early|too soon/i.test(code) &&
+                 /digitalRead\s*\(\s*2\s*\)/.test(code) &&
+                 /Serial\.print/.test(code) &&
+                 /millis/.test(code);
+        },
+        hint: 'Inside the while loop: if (digitalRead(2) == LOW) { Serial.println("CHEATED! Too early!"); gameState = 0; return; }',
+      },
+    ],
+  },
+
+  // ── 26. Morse Code ───────────────────────────────────────
+  {
+    id: 'morse_code', title: 'Morse Code Transmitter', icon: '📡',
+    difficulty: 'intermediate', xp: 75,
+    desc: 'Encode messages in Morse code using LED flashes and buzzer beeps.',
+    components: [{ type: 'buzzer', pin: 8 }],
+    steps: [
+      {
+        type: 'learn', title: 'What is Morse Code?', icon: '📡',
+        content: `
+<h2>Morse Code — The Original Digital Language</h2>
+<p>Invented in the 1830s, Morse code is a way to send text using just two signals: <strong>dots (·)</strong> and <strong>dashes (—)</strong>. It powered the telegraph system and saved countless lives at sea.</p>
+<p>Each letter maps to a pattern of dots and dashes:</p>
+<div class="info-box">
+  A = · —&nbsp;&nbsp; B = — · · ·&nbsp;&nbsp; C = — · — ·<br>
+  S = · · ·&nbsp;&nbsp; O = — — —&nbsp;&nbsp; S-O-S = · · · — — — · · ·<br><br>
+  <strong>Timing rules:</strong><br>
+  · (dot) = 1 unit on, 1 unit off<br>
+  — (dash) = 3 units on, 1 unit off<br>
+  Space between letters = 3 units off<br>
+  Space between words = 7 units off
+</div>
+<p>We'll transmit Morse code using the LED <em>and</em> the buzzer — both flash/beep in the same pattern!</p>`,
+        code: `const int LED = 13;
+const int BZR = 8;
+const int DOT  = 150;   // dot duration in ms
+const int DASH = 450;   // dash = 3x dot
+const int GAP  = 150;   // gap between signals
+
+void playSignal(int duration) {
+  digitalWrite(LED, HIGH);
+  tone(BZR, 800, duration);
+  delay(duration);
+  digitalWrite(LED, LOW);
+  noTone(BZR);
+  delay(GAP);
+}
+
+void dot()  { playSignal(DOT);  }
+void dash() { playSignal(DASH); }
+void letterGap() { delay(DOT * 2); }  // extra gap between letters
+void wordGap()   { delay(DOT * 6); }  // gap between words
+
+void morseS() { dot(); dot(); dot(); letterGap(); }
+void morseO() { dash(); dash(); dash(); letterGap(); }
+
+void setup() {
+  pinMode(LED, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("SOS in Morse code:");
+  Serial.println("S = . . .   O = - - -   S = . . .");
+}
+
+void loop() {
+  morseS();  // S = ...
+  morseO();  // O = ---
+  morseS();  // S = ...
+  wordGap();
+}`,
+      },
+      {
+        type: 'run', title: 'Transmit SOS!', icon: '▶',
+        content: `
+<h2>Watch (and hear!) the SOS Signal</h2>
+<p>Click <strong>▶ Run</strong> and watch the LED flash the international distress signal SOS: <strong>· · · — — — · · ·</strong></p>
+<p>The buzzer icon in the simulator lights up with each beep. The Serial Monitor shows the letter pattern.</p>
+<div class="info-box tip">
+  💡 SOS was chosen as the distress signal because it's the simplest Morse pattern to recognize — 3 shorts, 3 longs, 3 shorts!
+</div>`,
+        code: `const int LED = 13, BZR = 8;
+const int DOT = 200, DASH = 600, GAP = 200;
+
+void signal(int ms) {
+  digitalWrite(LED, HIGH); tone(BZR, 800, ms); delay(ms);
+  digitalWrite(LED, LOW);  noTone(BZR);        delay(GAP);
+}
+
+void S_letter() { signal(DOT); signal(DOT); signal(DOT); delay(400); }
+void O_letter() { signal(DASH); signal(DASH); signal(DASH); delay(400); }
+
+void setup() {
+  pinMode(LED, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Sending SOS...");
+}
+
+void loop() {
+  Serial.print("S"); S_letter();
+  Serial.print("O"); O_letter();
+  Serial.print("S"); S_letter();
+  Serial.println(" (SOS complete)");
+  delay(2000);
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Morse Your Name', icon: '🎯',
+        content: `
+<h2>🎯 Challenge: Transmit a Letter</h2>
+<p>Write a function that sends the Morse code for <strong>the letter "A" (· —)</strong>, then call it repeatedly from loop().</p>
+<ul>
+  <li>Define helper functions: <code>void dot()</code> and <code>void dash()</code></li>
+  <li>Each plays the LED + tone for the right duration</li>
+  <li>Create <code>void letterA()</code> that calls <code>dot()</code> then <code>dash()</code></li>
+  <li>Call <code>letterA()</code> from loop() with a gap between repeats</li>
+</ul>`,
+        code: `const int LED = 13, BZR = 8;
+
+void dot() {
+  // Turn LED on, play tone for 200ms, turn off, gap
+
+}
+
+void dash() {
+  // Turn LED on, play tone for 600ms, turn off, gap
+
+}
+
+void letterA() {
+  dot();   // A = . -
+  dash();
+}
+
+void setup() {
+  pinMode(LED, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  Serial.println("A");
+  letterA();
+  delay(1000);  // Gap between repeats
+}`,
+        validate: (code, _sim) => {
+          return /void\s+dot\s*\(/.test(code) &&
+                 /void\s+dash\s*\(/.test(code) &&
+                 /void\s+letter/.test(code) &&
+                 /digitalWrite/.test(code) &&
+                 /tone\s*\(/.test(code);
+        },
+        hint: 'void dot() { digitalWrite(LED,HIGH); tone(BZR,800,200); delay(200); digitalWrite(LED,LOW); noTone(BZR); delay(200); }  void dash() is the same but with 600ms instead of 200ms.',
+      },
+    ],
+  },
+
+  // ── 27. Stopwatch ────────────────────────────────────────
+  {
+    id: 'stopwatch', title: 'Stopwatch with millis()', icon: '⏱️',
+    difficulty: 'advanced', xp: 80,
+    desc: 'Build a start/stop stopwatch using millis() and a button.',
+    components: [{ type: 'button', pin: 2 }],
+    steps: [
+      {
+        type: 'learn', title: 'How a Stopwatch Works', icon: '⏱️',
+        content: `
+<h2>Building a Digital Stopwatch</h2>
+<p>A stopwatch has two states: <strong>running</strong> and <strong>stopped</strong>. Pressing a button toggles between them.</p>
+<p>The key insight: we don't track "elapsed time" directly. Instead, we record <em>when we started</em>, then calculate elapsed time on demand:</p>
+<div class="info-box">
+<pre><code>unsigned long startTime = 0;
+bool running = false;
+unsigned long elapsed = 0;
+
+// When START button pressed:
+startTime = millis();
+running = true;
+
+// When STOP button pressed:
+elapsed = millis() - startTime;
+running = false;
+
+// While running, to display current time:
+unsigned long currentElapsed = millis() - startTime;
+Serial.println(currentElapsed / 1000.0);</code></pre>
+</div>
+<p>This is exactly how real stopwatches work — record the start timestamp, then subtract from "now" to get elapsed time!</p>`,
+        code: `unsigned long startTime = 0;
+bool running = false;
+unsigned long lastElapsed = 0;
+int lastBtn = HIGH;
+unsigned long lastPrint = 0;
+
+void setup() {
+  pinMode(2, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("Stopwatch ready!");
+  Serial.println("Press button to START/STOP");
+}
+
+void loop() {
+  int btn = digitalRead(2);
+
+  // Detect button press
+  if (btn == LOW && lastBtn == HIGH) {
+    if (!running) {
+      startTime = millis();
+      running = true;
+      Serial.println("▶ STARTED");
+    } else {
+      lastElapsed = millis() - startTime;
+      running = false;
+      Serial.print("⏹ STOPPED — Time: ");
+      Serial.print(lastElapsed / 1000.0, 2);
+      Serial.println("s");
+    }
+    delay(50);  // debounce
+  }
+  lastBtn = btn;
+
+  // Print while running every 500ms
+  if (running && millis() - lastPrint >= 500) {
+    lastPrint = millis();
+    float elapsed = (millis() - startTime) / 1000.0;
+    Serial.print("Running: ");
+    Serial.print(elapsed, 1);
+    Serial.println("s");
+  }
+}`,
+      },
+      {
+        type: 'run', title: 'Use Your Stopwatch!', icon: '▶',
+        content: `
+<h2>Start and Stop!</h2>
+<p>Click <strong>▶ Run</strong>, then click the <strong>PUSH button</strong> to start the stopwatch. Click again to stop it!</p>
+<div class="info-box tip">
+  💡 The Serial Monitor shows elapsed time while running (every 0.5s) and displays the final time when stopped.
+</div>
+<p>Try starting and stopping multiple times — each time gives you a fresh measurement!</p>`,
+        code: `unsigned long startTime = 0;
+bool running = false;
+int lastBtn = HIGH;
+unsigned long lastPrint = 0;
+
+void setup() {
+  pinMode(2, INPUT_PULLUP);
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("=== STOPWATCH ===");
+  Serial.println("Click button: START/STOP");
+}
+
+void loop() {
+  int btn = digitalRead(2);
+  if (btn == LOW && lastBtn == HIGH) {
+    running = !running;
+    if (running) {
+      startTime = millis();
+      digitalWrite(13, HIGH);
+      Serial.println("▶ Running...");
+    } else {
+      float t = (millis() - startTime) / 1000.0;
+      digitalWrite(13, LOW);
+      Serial.print("STOPPED: "); Serial.print(t, 2); Serial.println("s");
+    }
+    delay(50);
+  }
+  lastBtn = btn;
+
+  if (running && millis() - lastPrint >= 500) {
+    lastPrint = millis();
+    float t = (millis() - startTime) / 1000.0;
+    Serial.print(t, 1); Serial.println("s");
+  }
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Lap Timer', icon: '🎯',
+        content: `
+<h2>🎯 Challenge: Simple Lap Timer</h2>
+<p>Modify the stopwatch to also record and print a <strong>lap time</strong> when the button is pressed while running (instead of stopping, it records the lap then keeps running).</p>
+<p>For simplicity: use TWO button presses — first press starts, second records a lap, third stops.</p>
+<ul>
+  <li>State 0: idle → button → start (state 1)</li>
+  <li>State 1: running → button → print lap time, keep running (state 2)</li>
+  <li>State 2: running → button → print total time, stop (state 0)</li>
+</ul>`,
+        code: `int state = 0;  // 0=idle, 1=first lap, 2=second lap
+unsigned long startTime = 0;
+unsigned long lapTime = 0;
+int lastBtn = HIGH;
+
+void setup() {
+  pinMode(2, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("Lap Timer! Press 3 times.");
+}
+
+void loop() {
+  int btn = digitalRead(2);
+  if (btn == LOW && lastBtn == HIGH) {
+    // Handle state transitions here!
+    delay(50);
+  }
+  lastBtn = btn;
+}`,
+        validate: (code, _sim) => {
+          return /millis\s*\(\s*\)/.test(code) &&
+                 /state/.test(code) &&
+                 /Serial\.print/.test(code) &&
+                 /digitalRead\s*\(\s*2\s*\)/.test(code);
+        },
+        hint: 'if (state == 0) { startTime = millis(); state = 1; Serial.println("Go!"); } else if (state == 1) { Serial.print("Lap: "); Serial.println((millis()-startTime)/1000.0, 2); lapTime = millis(); state = 2; } else { Serial.print("Total: "); Serial.println((millis()-startTime)/1000.0, 2); state = 0; }',
+      },
+    ],
+  },
+
+  // ── 28. Alarm System ─────────────────────────────────────
+  {
+    id: 'alarm_system', title: 'Simple Alarm System', icon: '🚨',
+    difficulty: 'intermediate', xp: 70,
+    desc: 'Build an alarm that triggers when a sensor threshold is crossed.',
+    components: [{ type: 'buzzer', pin: 8 }, { type: 'button', pin: 2 }],
+    steps: [
+      {
+        type: 'learn', title: 'How Alarms Work', icon: '🚨',
+        content: `
+<h2>Building an Alarm System</h2>
+<p>Real alarm systems follow a simple pattern:</p>
+<ol>
+  <li><strong>Monitor</strong> — constantly read a sensor</li>
+  <li><strong>Detect</strong> — check if value exceeds a threshold</li>
+  <li><strong>Alert</strong> — trigger buzzer, LEDs, notifications</li>
+  <li><strong>Reset</strong> — turn off when cleared or button pressed</li>
+</ol>
+<p>We'll build a "intruder alarm" where the A0 sensor represents a motion sensor. When A0 goes above 800, the alarm triggers. Press the button to silence it.</p>
+<div class="info-box">
+  This is a <strong>state machine</strong> with 2 states:<br>
+  • <code>MONITORING</code> — normal operation, watching sensor<br>
+  • <code>ALARMING</code> — alarm triggered, wait for reset button
+</div>
+<p>The same pattern works for: temperature alarms, water leak detectors, door sensors, and many more real applications!</p>`,
+        code: `const int BUZZER = 8;
+const int LED    = 13;
+const int BTN    = 2;
+const int THRESHOLD = 700;  // Trigger when A0 > this
+
+int alarming = false;
+
+void setup() {
+  pinMode(LED, OUTPUT);
+  pinMode(BTN, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("Alarm system armed!");
+  Serial.print("Threshold: "); Serial.println(THRESHOLD);
+}
+
+void loop() {
+  int sensorVal = analogRead(A0);
+
+  if (!alarming) {
+    // Monitoring
+    if (sensorVal > THRESHOLD) {
+      alarming = true;
+      Serial.println("⚠️ ALARM TRIGGERED!");
+    }
+  } else {
+    // Alarming
+    tone(BUZZER, 1000, 200);
+    digitalWrite(LED, HIGH);  delay(200);
+    noTone(BUZZER);
+    digitalWrite(LED, LOW);   delay(200);
+
+    if (digitalRead(BTN) == LOW) {
+      alarming = false;
+      noTone(BUZZER);
+      digitalWrite(LED, LOW);
+      Serial.println("✅ Alarm silenced.");
+      delay(500);
+    }
+  }
+}`,
+      },
+      {
+        type: 'run', title: 'Trigger the Alarm!', icon: '▶',
+        content: `
+<h2>Arm the Alarm!</h2>
+<p>Click <strong>▶ Run</strong>. Then:</p>
+<ol>
+  <li>Drag the <strong>A0 slider</strong> above 700 — the alarm triggers!</li>
+  <li>Watch the LED flash and the buzzer icon activate</li>
+  <li>Press the <strong>PUSH button</strong> to silence the alarm</li>
+</ol>
+<div class="info-box tip">
+  💡 Notice how the alarm keeps going even if you move A0 back below 700 — it only resets with the button. This is important for real alarms, so they don't self-reset!
+</div>`,
+        code: `const int BUZZER = 8, LED = 13, BTN = 2;
+const int THRESHOLD = 700;
+bool alarming = false;
+
+void setup() {
+  pinMode(LED, OUTPUT);
+  pinMode(BTN, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("ALARM SYSTEM ARMED");
+  Serial.println("Drag A0 above 700 to trigger. Button to silence.");
+}
+
+void loop() {
+  int sensor = analogRead(A0);
+
+  if (!alarming && sensor > THRESHOLD) {
+    alarming = true;
+    Serial.print("!!! ALARM at sensor="); Serial.println(sensor);
+  }
+
+  if (alarming) {
+    digitalWrite(LED, HIGH); tone(BUZZER, 900, 150); delay(150);
+    digitalWrite(LED, LOW);  noTone(BUZZER);         delay(150);
+    if (digitalRead(BTN) == LOW) {
+      alarming = false;
+      Serial.println("Alarm reset by button.");
+      delay(300);
+    }
+  } else {
+    Serial.print("Monitoring. Sensor="); Serial.println(sensor);
+    delay(500);
+  }
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Countdown Alarm', icon: '🎯',
+        content: `
+<h2>🎯 Challenge: Delay Before Alarm</h2>
+<p>Real alarms give you time to enter a code before triggering. Add a <strong>5-second countdown</strong> after threshold is crossed. If the button is pressed during the countdown, cancel the alarm. If not, it triggers!</p>
+<ul>
+  <li>When sensor > 700, print "INTRUDER! 5 seconds to disarm..."</li>
+  <li>Count down 5 seconds (use millis())</li>
+  <li>If button pressed during countdown: print "DISARMED" and reset</li>
+  <li>If countdown finishes: trigger buzzer alarm</li>
+</ul>`,
+        code: `const int BUZZER = 8, LED = 13, BTN = 2;
+bool alarming = false;
+bool counting = false;
+unsigned long countStart = 0;
+
+void setup() {
+  pinMode(LED, OUTPUT);
+  pinMode(BTN, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("Enter delay alarm system");
+}
+
+void loop() {
+  int sensor = analogRead(A0);
+
+  // Add your countdown alarm logic here!
+  // 1. Detect threshold crossing → start countdown
+  // 2. During countdown → check button to disarm
+  // 3. Countdown expired → alarming = true
+  // 4. When alarming → flash LED + buzz
+
+}`,
+        validate: (code, _sim) => {
+          return /millis\s*\(\s*\)/.test(code) &&
+                 /analogRead/.test(code) &&
+                 /digitalRead\s*\(\s*BTN|digitalRead\s*\(\s*2/.test(code) &&
+                 /tone\s*\(/.test(code) &&
+                 /Serial\.print/.test(code);
+        },
+        hint: 'if (!alarming && !counting && sensor > 700) { counting = true; countStart = millis(); Serial.println("5 seconds!"); } if (counting) { if (digitalRead(BTN)==LOW) { counting=false; Serial.println("DISARMED"); } else if (millis()-countStart > 5000) { counting=false; alarming=true; } }',
+      },
+    ],
+  },
+
+  // ── 29. Temperature Monitor ──────────────────────────────
+  {
+    id: 'temp_monitor', title: 'Temperature Monitor', icon: '🌡️',
+    difficulty: 'intermediate', xp: 65,
+    desc: 'Simulate a temperature sensor, display readings, and alert when too hot.',
+    steps: [
+      {
+        type: 'learn', title: 'Simulating a Temperature Sensor', icon: '🌡️',
+        content: `
+<h2>Reading Temperature (Simulated)</h2>
+<p>A real temperature sensor like the <strong>TMP36</strong> outputs a voltage proportional to temperature. We read it with <code>analogRead()</code> and convert to Celsius using math.</p>
+<p>For the TMP36:</p>
+<div class="info-box">
+<pre><code>float voltage = analogRead(A0) * (5.0 / 1023.0);
+float tempC   = (voltage - 0.5) * 100.0;</code></pre>
+  <br>
+  At 0°C → sensor outputs 0.5V<br>
+  At 25°C → 0.75V&nbsp;&nbsp;|&nbsp;&nbsp;At 100°C → 1.5V
+</div>
+<p>In our simulator, we'll use <code>map()</code> to treat the A0 slider as temperature (-10 to 60°C range):</p>
+<div class="info-box tip">
+<pre><code>int raw = analogRead(A0);
+int tempC = map(raw, 0, 1023, -10, 60);</code></pre>
+  Slider at 0 = -10°C (freezing), slider at max = 60°C (very hot)
+</div>
+<p>Drag the A0 slider to simulate different temperatures!</p>`,
+        code: `void setup() {
+  Serial.begin(9600);
+  pinMode(13, OUTPUT);  // Alert LED
+  Serial.println("Temperature Monitor Starting...");
+}
+
+void loop() {
+  int raw = analogRead(A0);
+  int tempC = map(raw, 0, 1023, -10, 60);
+
+  Serial.print("Temp: ");
+  Serial.print(tempC);
+  Serial.print("°C  ");
+
+  if (tempC < 0) {
+    Serial.println("❄️ FREEZING");
+    digitalWrite(13, LOW);
+  } else if (tempC < 25) {
+    Serial.println("😊 Comfortable");
+    digitalWrite(13, LOW);
+  } else if (tempC < 40) {
+    Serial.println("😓 Warm");
+    digitalWrite(13, LOW);
+  } else {
+    Serial.println("🔥 HOT! ALERT!");
+    digitalWrite(13, HIGH);  // LED on when hot!
+  }
+
+  delay(600);
+}`,
+      },
+      {
+        type: 'run', title: 'Drag to Change Temperature!', icon: '▶',
+        content: `
+<h2>Simulate Different Temperatures!</h2>
+<p>Click <strong>▶ Run</strong>, then drag the <strong>A0 slider</strong> to simulate different temperatures:</p>
+<ul>
+  <li>Far left → -10°C (freezing)</li>
+  <li>Middle → ~25°C (comfortable)</li>
+  <li>Far right → 60°C (alert! LED turns on)</li>
+</ul>
+<div class="info-box tip">
+  💡 Real projects use this same pattern — read sensor, convert to meaningful units, display or trigger alerts based on thresholds. The same code structure works for humidity, pressure, CO2 levels, and more!
+</div>`,
+        code: `void setup() {
+  Serial.begin(9600);
+  pinMode(13, OUTPUT);
+  Serial.println("=== Temp Monitor ===");
+  Serial.println("Drag A0 slider to set temperature");
+}
+
+void loop() {
+  int raw = analogRead(A0);
+  int tempC = map(raw, 0, 1023, -10, 60);
+  int tempF = tempC * 9 / 5 + 32;
+
+  Serial.print(tempC); Serial.print("°C / ");
+  Serial.print(tempF); Serial.print("°F");
+
+  if (tempC >= 40) {
+    Serial.println("  *** OVERHEAT ALERT ***");
+    digitalWrite(13, HIGH);
+  } else {
+    Serial.println("  OK");
+    digitalWrite(13, LOW);
+  }
+
+  delay(500);
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Temp Logger', icon: '🎯',
+        content: `
+<h2>🎯 Challenge: Min/Max Temperature Logger</h2>
+<p>Write a sketch that tracks the <strong>minimum and maximum</strong> temperatures seen during the session and prints them alongside the current reading.</p>
+<ul>
+  <li>Initialize <code>int minTemp = 100;</code> and <code>int maxTemp = -100;</code></li>
+  <li>Each loop, update min/max if current temp is lower/higher</li>
+  <li>Print: current temp, min seen, max seen</li>
+  <li>Drag the A0 slider to different values to see min/max update!</li>
+</ul>`,
+        code: `int minTemp = 100;   // Start very high so first reading beats it
+int maxTemp = -100;  // Start very low so first reading beats it
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Min/Max Temperature Logger");
+}
+
+void loop() {
+  int raw = analogRead(A0);
+  int tempC = map(raw, 0, 1023, -10, 60);
+
+  // Update min and max here!
+
+
+  // Print current, min, max
+  Serial.print("Now: "); Serial.print(tempC);
+  Serial.print("°C  Min: "); Serial.print(minTemp);
+  Serial.print("°C  Max: "); Serial.print(maxTemp);
+  Serial.println("°C");
+
+  delay(500);
+}`,
+        validate: (code, _sim) => {
+          return /analogRead/.test(code) &&
+                 /\bmap\s*\(/.test(code) &&
+                 /minTemp|min_temp/.test(code) &&
+                 /maxTemp|max_temp/.test(code) &&
+                 /Serial\.print/.test(code);
+        },
+        hint: 'if (tempC < minTemp) minTemp = tempC;  if (tempC > maxTemp) maxTemp = tempC;',
+      },
+    ],
+  },
+
+  // ── 30. Digital Dice ─────────────────────────────────────
+  {
+    id: 'digital_dice', title: 'Digital Dice', icon: '🎲',
+    difficulty: 'intermediate', xp: 65,
+    desc: 'Press a button to roll a virtual die — LED blinks the result!',
+    components: [{ type: 'button', pin: 2 }],
+    steps: [
+      {
+        type: 'learn', title: 'Random Numbers on Arduino', icon: '🎲',
+        content: `
+<h2>Using Random Numbers</h2>
+<p>Arduino has a built-in <code>random()</code> function that generates pseudo-random numbers:</p>
+<div class="info-box">
+  <code>random(1, 7)</code> → a random number from 1 to 6 (never 7!)<br><br>
+  <strong>Note:</strong> The upper bound is <em>exclusive</em> — random(1, 7) gives 1, 2, 3, 4, 5, or 6.
+</div>
+<p>For truly unpredictable numbers, we use <code>randomSeed()</code> to give it a different starting point each time:</p>
+<div class="info-box tip">
+<pre><code>randomSeed(analogRead(A1));  // A1 has random "noise" — different each boot!</code></pre>
+</div>
+<p>Our digital dice will:</p>
+<ol>
+  <li>Wait for button press</li>
+  <li>Generate a random number 1–6</li>
+  <li>Blink the LED that many times</li>
+  <li>Print the result to Serial</li>
+</ol>`,
+        code: `int lastBtn = HIGH;
+
+void blinkN(int n) {
+  for (int i = 0; i < n; i++) {
+    digitalWrite(13, HIGH); delay(200);
+    digitalWrite(13, LOW);  delay(200);
+  }
+}
+
+void setup() {
+  pinMode(13, OUTPUT);
+  pinMode(2, INPUT_PULLUP);
+  Serial.begin(9600);
+  randomSeed(analogRead(A1));  // Seed with random noise
+  Serial.println("🎲 Digital Dice ready!");
+  Serial.println("Press button to roll!");
+}
+
+void loop() {
+  int btn = digitalRead(2);
+
+  if (btn == LOW && lastBtn == HIGH) {
+    int roll = random(1, 7);  // 1-6
+    Serial.print("Rolled: ");
+    Serial.print(roll);
+    Serial.println(" ← blinking now...");
+    blinkN(roll);
+    Serial.println("Press again to roll!");
+    delay(500);
+  }
+
+  lastBtn = btn;
+}`,
+      },
+      {
+        type: 'run', title: 'Roll the Dice!', icon: '▶',
+        content: `
+<h2>Roll!</h2>
+<p>Click <strong>▶ Run</strong>, then <strong>click the PUSH button</strong> to roll the dice. Watch pin 13 blink the result, and check the Serial Monitor for the number!</p>
+<div class="info-box tip">
+  💡 Every roll is random — you might get the same number twice in a row, just like a real die! The <code>randomSeed()</code> call makes the sequence different each time you restart.
+</div>`,
+        code: `int lastBtn = HIGH;
+
+void blinkN(int n) {
+  for (int i = 0; i < n; i++) {
+    digitalWrite(13, HIGH); delay(250);
+    digitalWrite(13, LOW);  delay(250);
+  }
+}
+
+void setup() {
+  pinMode(13, OUTPUT);
+  pinMode(2, INPUT_PULLUP);
+  Serial.begin(9600);
+  randomSeed(analogRead(A1));
+  Serial.println("=== DIGITAL DICE ===");
+  Serial.println("Press button to roll! (1-6)");
+}
+
+void loop() {
+  int btn = digitalRead(2);
+  if (btn == LOW && lastBtn == HIGH) {
+    int roll = random(1, 7);
+    Serial.print("🎲 You rolled: "); Serial.println(roll);
+    blinkN(roll);
+    delay(300);
+  }
+  lastBtn = btn;
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Double Dice', icon: '🎯',
+        content: `
+<h2>🎯 Challenge: Roll Two Dice!</h2>
+<p>Modify the dice to roll <strong>two dice at once</strong>. Print both individual results AND their sum. Blink the LED the sum total number of times.</p>
+<ul>
+  <li>Generate two separate random numbers (1-6 each)</li>
+  <li>Print both: "Die 1: 4  Die 2: 3  Total: 7"</li>
+  <li>Blink LED 7 times (the total)</li>
+</ul>`,
+        code: `int lastBtn = HIGH;
+
+void blinkN(int n) {
+  for (int i = 0; i < n; i++) {
+    digitalWrite(13, HIGH); delay(150);
+    digitalWrite(13, LOW);  delay(150);
+  }
+}
+
+void setup() {
+  pinMode(13, OUTPUT);
+  pinMode(2, INPUT_PULLUP);
+  Serial.begin(9600);
+  randomSeed(analogRead(A1));
+  Serial.println("Double Dice! Press button.");
+}
+
+void loop() {
+  int btn = digitalRead(2);
+  if (btn == LOW && lastBtn == HIGH) {
+    // Roll two dice and display both + sum
+
+    delay(300);
+  }
+  lastBtn = btn;
+}`,
+        validate: (code, _sim) => {
+          const rolls = (code.match(/random\s*\(\s*1\s*,\s*7\s*\)/g) || []).length;
+          return rolls >= 2 &&
+                 /Serial\.print/.test(code) &&
+                 /blinkN|blink/.test(code) &&
+                 /\+/.test(code);
+        },
+        hint: 'int d1 = random(1, 7); int d2 = random(1, 7); int total = d1 + d2; Serial.print("Die 1: "); Serial.print(d1); Serial.print("  Die 2: "); Serial.print(d2); Serial.print("  Total: "); Serial.println(total); blinkN(total);',
+      },
+    ],
+  },
+
+  // ── 31. PWM Fade Sequence ────────────────────────────────
+  {
+    id: 'fade_sequence', title: 'Multi-LED Fade Sequence', icon: '🌊',
+    difficulty: 'advanced', xp: 80,
+    desc: 'Create a smooth breathing/fading animation across multiple PWM LEDs.',
+    steps: [
+      {
+        type: 'learn', title: 'The Breathing Effect', icon: '🌊',
+        content: `
+<h2>The LED "Breathing" Effect</h2>
+<p>A "breathing" LED fades in and out smoothly — like a sleeping MacBook indicator. It uses PWM (<code>analogWrite()</code>) to control brightness.</p>
+<p>The basic breathing loop:</p>
+<div class="info-box">
+<pre><code>// Fade IN
+for (int b = 0; b <= 255; b++) {
+  analogWrite(9, b);
+  delay(5);  // 5ms per step × 256 steps = ~1.3s fade
+}
+
+// Fade OUT
+for (int b = 255; b >= 0; b--) {
+  analogWrite(9, b);
+  delay(5);
+}</code></pre>
+</div>
+<p>For a multi-LED sequence, we offset each LED slightly so they each breathe at a different point in the cycle — creating a wave-like ripple!</p>
+<div class="info-box tip">
+  💡 This kind of effect is used in gaming keyboards, phone indicators, and smart home lights. It's satisfying because smooth fading looks more "alive" than on/off blinking.
+</div>`,
+        code: `int pwmPins[] = {9, 10, 11};  // Must be PWM (~) pins!
+int numPins = 3;
+
+void setup() {
+  for (int i = 0; i < numPins; i++) {
+    pinMode(pwmPins[i], OUTPUT);
+  }
+  Serial.begin(9600);
+  Serial.println("Fade sequence running!");
+}
+
+void loop() {
+  // Each LED fades one at a time
+  for (int p = 0; p < numPins; p++) {
+    // Fade in
+    for (int b = 0; b <= 255; b += 5) {
+      analogWrite(pwmPins[p], b);
+      delay(15);
+    }
+    // Fade out
+    for (int b = 255; b >= 0; b -= 5) {
+      analogWrite(pwmPins[p], b);
+      delay(15);
+    }
+    analogWrite(pwmPins[p], 0);
+  }
+}`,
+      },
+      {
+        type: 'run', title: 'Watch the Wave!', icon: '▶',
+        content: `
+<h2>Run the Fade Sequence!</h2>
+<p>Click <strong>▶ Run</strong> and watch pins 9, 10, and 11 fade in and out one at a time, creating a smooth wave effect.</p>
+<div class="info-box tip">
+  💡 In the simulator, pins with PWM values show a brightness indicator. Watch them pulse through 0→255→0 in sequence!
+</div>`,
+        code: `int pwmPins[] = {9, 10, 11};
+int n = 3;
+
+void breathe(int pin) {
+  for (int b = 0; b <= 255; b += 3) {
+    analogWrite(pin, b); delay(8);
+  }
+  for (int b = 255; b >= 0; b -= 3) {
+    analogWrite(pin, b); delay(8);
+  }
+  analogWrite(pin, 0);
+}
+
+void setup() {
+  for (int i = 0; i < n; i++) pinMode(pwmPins[i], OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  for (int i = 0; i < n; i++) {
+    Serial.print("Fading pin "); Serial.println(pwmPins[i]);
+    breathe(pwmPins[i]);
+  }
+}`,
+      },
+      {
+        type: 'challenge', title: 'Challenge: Custom Fade', icon: '🎯',
+        content: `
+<h2>🎯 Challenge: Breathe with millis()</h2>
+<p>Rewrite the breathing LED using <code>millis()</code> instead of <code>delay()</code> so the LED smoothly fades on pin 9 <strong>without blocking loop()</strong>.</p>
+<p>Hint: Use <code>sin()</code> math to create a smooth wave: brightness = (sin(time) + 1) / 2 × 255</p>
+<ul>
+  <li>Use <code>millis()</code> to track time</li>
+  <li>Calculate brightness using the elapsed time</li>
+  <li>Write brightness to pin 9 with <code>analogWrite()</code></li>
+  <li>No <code>delay()</code> calls!</li>
+</ul>`,
+        code: `#include <math.h>  // For sin()
+
+void setup() {
+  pinMode(9, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  unsigned long t = millis();
+
+  // Use sin() to create smooth wave:
+  // sin() returns -1 to +1, we want 0 to 255
+  float angle = t / 1000.0 * 3.14159;  // Full cycle every ~2s
+  int brightness = (int)((sin(angle) + 1.0) / 2.0 * 255.0);
+
+  // Apply to pin 9 here!
+
+  delay(10);  // Small delay OK here (just 10ms — nearly non-blocking)
+}`,
+        validate: (code, _sim) => {
+          return /millis\s*\(\s*\)/.test(code) &&
+                 /sin\s*\(/.test(code) &&
+                 /analogWrite\s*\(\s*9/.test(code);
+        },
+        hint: 'analogWrite(9, brightness);  Then optionally add: Serial.println(brightness); to see the wave in Serial Monitor!',
       },
     ],
   },

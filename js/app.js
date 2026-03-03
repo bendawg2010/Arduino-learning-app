@@ -9,6 +9,7 @@ const DEFAULT_STATE = {
   completedLessons: [], quizScores: {}, achievements: [],
   challengesPassed: 0, firstTryPasses: 0,
   serialUsed: false, pwmUsed: false,
+  savedCodes: {},
 };
 let STATE = loadState();
 let board  = null;
@@ -670,6 +671,15 @@ function handleStepQuiz(el, step) {
 function completeLesson() {
   const alreadyDone = STATE.completedLessons.includes(currentLesson.id);
 
+  // Save the user's current editor code for this lesson
+  if (editor) {
+    if (!STATE.savedCodes) STATE.savedCodes = {};
+    const code = editor.getValue();
+    if (code && code.trim()) {
+      STATE.savedCodes[currentLesson.id] = code;
+    }
+  }
+
   if (!alreadyDone) {
     STATE.completedLessons.push(currentLesson.id);
     saveState();
@@ -677,6 +687,8 @@ function completeLesson() {
     updateSidebarChecks();
     checkAchievements();
     launchConfetti();
+  } else {
+    saveState();
   }
 
   const idx        = LESSONS.indexOf(currentLesson);
@@ -692,12 +704,16 @@ function completeLesson() {
         : `<p style="color:var(--green);font-weight:600;font-size:1.1rem">+${currentLesson.xp} XP earned!</p>
            <p style="color:var(--text3);margin-top:6px">Outstanding work! Keep it up! 💪</p>`
       }
+      <p style="color:var(--text3);font-size:.8rem;margin-top:10px">
+        💾 Your code has been saved — find it in the Playground under "Your Saved Lesson Code"
+      </p>
     </div>`,
     `${nextLesson
       ? `<button class="btn-primary" onclick="closeModal();navigate('lesson','${nextLesson.id}')">
            Next: ${nextLesson.title} →
          </button>`
       : `<button class="btn-primary" onclick="closeModal();navigate('achievements')">🏆 View Achievements</button>`}
+     <button class="btn-secondary" onclick="closeModal();navigate('playground')">🧪 Open Playground</button>
      <button class="btn-secondary" onclick="closeModal();navigate('home')">🏠 Dashboard</button>`
   );
 }
@@ -725,6 +741,17 @@ function updateSidebarChecks() {
 }
 
 // ── Free Code Playground ─────────────────────────────────
+// Hardware component definitions for playground
+const PG_COMPONENTS = [
+  { id: 'button',  label: '🔘 Button',   type: 'button',  pin: 2  },
+  { id: 'buzzer',  label: '🔔 Buzzer',   type: 'buzzer',  pin: 8  },
+  { id: 'servo',   label: '⚙️ Servo',    type: 'servo',   pin: 9  },
+  { id: 'rgb',     label: '🌈 RGB LED',  type: 'rgb',     pins: [9,10,11] },
+  { id: 'led2',    label: '💡 LED (2)',   type: 'led',     pin: 2  },
+  { id: 'pot',     label: '🎛️ Pot (A1)', type: 'pot',     pin: 1  },
+];
+let pgActiveComponents = new Set();
+
 function renderPlayground() {
   currentLesson = null;
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -748,9 +775,15 @@ function renderPlayground() {
           ['🌈 PWM Fade',    'void setup(){pinMode(9,OUTPUT);}\nvoid loop(){for(int b=0;b<=255;b+=5){analogWrite(9,b);delay(15);}for(int b=255;b>=0;b-=5){analogWrite(9,b);delay(15);}}'],
           ['🎛️ Analog Read', 'void setup(){Serial.begin(9600);}\nvoid loop(){int v=analogRead(A0);int p=map(v,0,1023,0,100);Serial.print("A0=");Serial.print(v);Serial.print(" (");Serial.print(p);Serial.println("%)");delay(500);}'],
           ['⏱️ millis()',    'unsigned long prev=0;\nvoid setup(){Serial.begin(9600);}\nvoid loop(){unsigned long now=millis();if(now-prev>=1000){prev=now;Serial.print("Second: ");Serial.println(now/1000);}}'],
+          ['🔘 Button Read', 'void setup(){pinMode(2,INPUT_PULLUP);Serial.begin(9600);}\nvoid loop(){int state=digitalRead(2);Serial.println(state==LOW?"Button PRESSED":"Button released");delay(100);}'],
+          ['🔔 Buzzer Tone', 'void setup(){pinMode(8,OUTPUT);}\nvoid loop(){for(int i=0;i<50;i++){digitalWrite(8,HIGH);delay(1);digitalWrite(8,LOW);delay(1);}delay(500);}'],
         ].map(([name, code]) => `
           <div class="snippet-chip" onclick='loadSnippet(${JSON.stringify(code)})'>${name}</div>
         `).join('')}
+        <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+          <p style="color:var(--text3);font-size:.82rem;margin-bottom:8px;font-weight:600">Your Saved Lesson Code:</p>
+          ${renderSavedCodeSnippets()}
+        </div>
       </div>
     </div>
     <div class="editor-panel">
@@ -758,6 +791,14 @@ function renderPlayground() {
         <span class="toolbar-title">playground.ino&nbsp;<span style="color:var(--text3);font-weight:400;font-size:.72rem">(Ctrl+Enter = Run)</span></span>
         <button class="run-btn" id="run-btn" onclick="toggleRun()">▶ Run</button>
         <button class="reset-code-btn" onclick="resetPlayground()">↺ Clear</button>
+      </div>
+      <div class="hw-toolbar" id="hw-toolbar">
+        <span class="hw-toolbar-label">Hardware Components (click to add to simulator):</span>
+        ${PG_COMPONENTS.map(c => `
+          <div class="hw-chip" id="hw-${c.id}" onclick="toggleHWComponent('${c.id}')" title="Pin ${c.pin || c.pins?.join('/')}">
+            <span class="hw-dot"></span>${c.label}
+          </div>
+        `).join('')}
       </div>
       <div class="editor-cm-wrap" id="editor-wrap"></div>
       <div class="sim-panel">
@@ -790,7 +831,51 @@ function renderPlayground() {
       setSize: () => {}, refresh: () => {},
     };
   }
-  board = new ArduinoBoard(document.getElementById('sim-body'));
+  pgActiveComponents = new Set();
+  rebuildPlaygroundBoard();
+}
+
+function renderSavedCodeSnippets() {
+  const saved = STATE.savedCodes || {};
+  const entries = Object.entries(saved);
+  if (!entries.length) return '<p style="color:var(--text3);font-size:.8rem;font-style:italic">Complete lessons to save your code here.</p>';
+  return entries.map(([id, code]) => {
+    const lesson = LESSONS.find(l => l.id === id);
+    const title = lesson ? `${lesson.icon} ${lesson.title}` : id;
+    return `<div class="snippet-chip" onclick='loadSnippet(${JSON.stringify(code)})' title="${title}">${title}</div>`;
+  }).join('');
+}
+
+window.toggleHWComponent = function(id) {
+  if (pgActiveComponents.has(id)) {
+    pgActiveComponents.delete(id);
+  } else {
+    pgActiveComponents.add(id);
+  }
+  document.querySelectorAll('.hw-chip').forEach(c => c.classList.remove('active'));
+  pgActiveComponents.forEach(cid => {
+    const el = document.getElementById(`hw-${cid}`);
+    if (el) el.classList.add('active');
+  });
+  rebuildPlaygroundBoard();
+};
+
+function rebuildPlaygroundBoard() {
+  if (board) board.stop();
+  const simBody = document.getElementById('sim-body');
+  if (!simBody) return;
+  const components = [];
+  pgActiveComponents.forEach(cid => {
+    const def = PG_COMPONENTS.find(c => c.id === cid);
+    if (!def) return;
+    if (def.pins) {
+      // RGB LED — add as three separate LEDs
+      def.pins.forEach((pin, i) => components.push({ type: 'led', pin }));
+    } else {
+      components.push({ type: def.type, pin: def.pin });
+    }
+  });
+  board = new ArduinoBoard(simBody, components);
 }
 
 window.loadSnippet = (code) => { if (editor) editor.setValue(code); };
@@ -820,7 +905,7 @@ async function toggleRun() {
 
 // ── Confetti ──────────────────────────────────────────────
 function launchConfetti() {
-  const colors = ['#58a6ff','#3fb950','#ffd700','#bc8cff','#f0883e'];
+  const colors = ['#00A550','#F2A900','#3fb950','#ffd700','#bc8cff'];
   for (let i = 0; i < 40; i++) {
     const d = document.createElement('div');
     d.className = 'confetti-bit';
