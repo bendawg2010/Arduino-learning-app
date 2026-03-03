@@ -6588,4 +6588,11 @@ void loop() {
 
 // ── Sort lessons: beginner → intermediate → advanced ──────
 const _DIFF_RANK = { beginner: 0, intermediate: 1, advanced: 2 };
+
+// Hardware lessons were accidentally placed inside PROJECTS — move them to LESSONS
+// (Project cards have no 'id' field; hardware lessons do)
+for (let i = PROJECTS.length - 1; i >= 0; i--) {
+  if (PROJECTS[i].id) LESSONS.push(PROJECTS.splice(i, 1)[0]);
+}
+
 LESSONS.sort((a, b) => (_DIFF_RANK[a.difficulty] || 0) - (_DIFF_RANK[b.difficulty] || 0));
