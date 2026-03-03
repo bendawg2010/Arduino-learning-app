@@ -5464,4 +5464,1122 @@ void loop() {
         l.includes('Counter') || l.includes('CW') || l.includes('CCW'));
     },
   },
+
+  {
+    id: 'ir_sensor',
+    icon: '🚧',
+    title: 'IR Obstacle Sensor',
+    xp: 55,
+    difficulty: 'beginner',
+    desc: 'Use an IR proximity sensor to detect obstacles. Perfect for robot collision avoidance — the sensor outputs a digital HIGH/LOW signal based on whether something is in range.',
+    parts: ['Arduino Uno', 'FC-51 or KY-032 IR obstacle sensor', '1x LED', '220Ω resistor', 'Breadboard'],
+    skills: ['digitalRead()', 'INPUT_PULLUP', 'if/else', 'Sensor calibration'],
+    components: [{ type: 'button', pin: 2 }],
+    wiring: [
+      'IR Sensor VCC → 5V',
+      'IR Sensor GND → GND',
+      'IR Sensor DO (digital out) → Pin 2',
+      'LED (+) → 220Ω → Pin 13, LED (-) → GND',
+      'Adjust the onboard potentiometer to set detection distance (2–30 cm)',
+    ],
+    theory: `
+## How IR Obstacle Sensors Work
+
+The sensor has an **IR LED** (emitter) and a **photodiode** (receiver). The emitter constantly pulses infrared light. When an object is close enough, the IR light reflects back to the receiver.
+
+The **DO (Digital Output)** pin:
+- **HIGH** (1) = No obstacle
+- **LOW** (0) = Obstacle detected
+
+This is **active LOW** behavior, similar to INPUT_PULLUP buttons.
+
+### Sensor Modules (FC-51, KY-032)
+
+| Feature | Value |
+|---------|-------|
+| Range | 2–30 cm (adjustable) |
+| Supply | 3.3V or 5V |
+| Output | Digital DO + Analog AO |
+| Adjust | Onboard potentiometer |
+
+### Wiring
+
+\`\`\`
+    Arduino        FC-51 / KY-032
+    5V      ─────  VCC
+    GND     ─────  GND
+    Pin 2   ─────  DO (Digital Output)
+\`\`\`
+
+### Simulator
+The push button simulates the IR sensor output. **Released** = no obstacle (HIGH). **Pressed and held** = obstacle detected (LOW).
+    `,
+    starterCode: `// IR Obstacle Sensor
+// DO → Pin 2 (HIGH = clear, LOW = obstacle detected)
+// Simulator: hold the button to simulate an obstacle
+
+const int IR_PIN  = 2;
+const int LED_PIN = 13;
+
+void setup() {
+  pinMode(IR_PIN, INPUT);   // IR sensor output
+  pinMode(LED_PIN, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("IR Obstacle Sensor ready!");
+  Serial.println("Hold button to simulate obstacle.");
+}
+
+void loop() {
+  int obstacle = digitalRead(IR_PIN);
+
+  if (obstacle == LOW) {
+    // LOW = obstacle in range (active LOW)
+    digitalWrite(LED_PIN, HIGH);
+    Serial.println("!! OBSTACLE DETECTED !!");
+  } else {
+    // HIGH = path clear
+    digitalWrite(LED_PIN, LOW);
+    Serial.println("-- Path clear");
+  }
+
+  delay(200);
+}
+`,
+    challenge: 'Add a second LED on pin 12. Make the "clear" LED (pin 12) on when the path is clear, and the "obstacle" LED (pin 13) on when blocked. Both LEDs must never be on at the same time.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('OBSTACLE') || l.includes('clear') || l.includes('Clear'));
+    },
+  },
+
+  {
+    id: 'pir_motion',
+    icon: '👁️',
+    title: 'PIR Motion Sensor',
+    xp: 55,
+    difficulty: 'beginner',
+    desc: 'Detect human movement with a passive infrared sensor. Build a motion-triggered alarm with an LED and buzzer — exactly like real security systems.',
+    parts: ['Arduino Uno', 'HC-SR501 PIR sensor', '1x LED', '1x buzzer', '220Ω resistor', 'Breadboard'],
+    skills: ['digitalRead()', 'millis() debounce', 'Motion detection', 'if/else'],
+    components: [{ type: 'button', pin: 2 }, { type: 'buzzer', pin: 8 }],
+    wiring: [
+      'PIR VCC → 5V',
+      'PIR GND → GND',
+      'PIR OUT → Pin 2',
+      'LED (+) → 220Ω → Pin 13',
+      'Buzzer (+) → Pin 8',
+      'Both LED and buzzer GND → Arduino GND',
+      'Allow 30–60s warm-up time on first power-up',
+    ],
+    theory: `
+## How PIR Sensors Work
+
+A **Passive Infrared (PIR)** sensor detects changes in infrared radiation — specifically the heat signature of humans and animals moving through its field of view.
+
+Key word: **Passive** — it detects IR, it doesn't emit it (unlike IR obstacle sensors).
+
+### HC-SR501 Specs
+
+| Feature | Value |
+|---------|-------|
+| Output | HIGH for ~3s when motion detected |
+| Range | 3–7 meters |
+| Angle | ~120° cone |
+| Supply | 5–20V |
+| Warm-up | 30–60 seconds |
+
+### Two Onboard Potentiometers
+
+- **Sensitivity pot** (left): adjust detection range (3–7m)
+- **Time-delay pot** (right): adjust how long output stays HIGH (3s to 5min)
+
+### Wiring
+
+\`\`\`
+    Arduino        HC-SR501
+    5V      ─────  VCC (middle pin)
+    GND     ─────  GND
+    Pin 2   ─────  OUT
+\`\`\`
+
+### Simulator
+The button simulates PIR output. **Press and hold** = motion detected (HIGH pulse). **Release** = no motion.
+    `,
+    starterCode: `// PIR Motion Sensor — Motion-activated alarm
+// PIR OUT → Pin 2  (HIGH = motion, LOW = no motion)
+// Simulator: press the button to simulate motion
+
+const int PIR_PIN    = 2;
+const int LED_PIN    = 13;
+const int BUZZER_PIN = 8;
+
+bool alarmActive = false;
+
+void setup() {
+  pinMode(PIR_PIN, INPUT);
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("PIR Motion Sensor ready!");
+  Serial.println("(Allow 30s warm-up on real hardware)");
+}
+
+void loop() {
+  int motion = digitalRead(PIR_PIN);
+
+  if (motion == HIGH) {
+    // Motion detected!
+    alarmActive = true;
+    digitalWrite(LED_PIN, HIGH);
+    tone(BUZZER_PIN, 1000, 200);
+    Serial.println(">> MOTION DETECTED!");
+    delay(200);
+  } else {
+    if (alarmActive) {
+      Serial.println("-- Motion stopped.");
+      alarmActive = false;
+    }
+    digitalWrite(LED_PIN, LOW);
+    noTone(BUZZER_PIN);
+  }
+
+  delay(100);
+}
+`,
+    challenge: 'Add a "snooze" feature: after motion is detected, ignore further triggers for 5 seconds (use millis() to track when the last detection happened).',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('MOTION') || l.includes('motion'));
+    },
+  },
+
+  {
+    id: 'microphone_sensor',
+    icon: '🎤',
+    title: 'Microphone Sound Sensor',
+    xp: 50,
+    difficulty: 'beginner',
+    desc: 'Detect sounds like claps using a KY-038 microphone module. Read both the digital threshold output and the raw analog audio signal.',
+    parts: ['Arduino Uno', 'KY-038 or KY-037 sound sensor', '1x LED', '220Ω resistor', 'Breadboard'],
+    skills: ['digitalRead()', 'analogRead()', 'Threshold detection', 'Sound-activated projects'],
+    components: [{ type: 'button', pin: 7 }],
+    wiring: [
+      'KY-038 VCC → 5V',
+      'KY-038 GND → GND',
+      'KY-038 DO (digital) → Pin 7',
+      'KY-038 AO (analog) → A0',
+      'LED (+) → 220Ω → Pin 13',
+      'Adjust the onboard potentiometer for clap sensitivity',
+    ],
+    theory: `
+## KY-038 Sound Sensor
+
+The module has a small electret microphone that converts sound waves into a varying voltage signal.
+
+### Two Outputs
+
+| Output | Type | Range | Use |
+|--------|------|-------|-----|
+| AO | Analog | 0–1023 | Raw audio level |
+| DO | Digital | 0 or 1 | Threshold exceeded |
+
+The **DO** (digital output) goes HIGH when sound exceeds the threshold set by the onboard potentiometer — perfect for clap detection.
+
+The **AO** (analog output) gives the raw amplitude — useful for measuring sound level or recording patterns.
+
+### Detection Technique
+
+For reliable clap detection, look for a brief HIGH pulse followed by return to LOW:
+
+\`\`\`cpp
+if (digitalRead(DO_PIN) == HIGH) {
+  // Sound detected!
+  Serial.println("Clap!");
+  delay(200);  // debounce — ignore echoes
+}
+\`\`\`
+
+### Wiring
+
+\`\`\`
+    Arduino        KY-038
+    5V      ─────  VCC
+    GND     ─────  GND
+    Pin 7   ─────  DO   (digital threshold)
+    A0      ─────  AO   (analog audio)
+\`\`\`
+
+### Simulator
+The button on Pin 7 simulates the DO output. Slide **A0** to simulate different sound levels on the analog output.
+    `,
+    starterCode: `// Microphone Sound Sensor — Clap Detector
+// DO → Pin 7  (HIGH = sound threshold exceeded)
+// AO → A0     (0-1023 raw sound level)
+// Simulator: press button = clap, A0 slider = volume
+
+const int DO_PIN  = 7;
+const int LED_PIN = 13;
+
+int clapCount = 0;
+
+void setup() {
+  pinMode(DO_PIN, INPUT);
+  pinMode(LED_PIN, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Clap detector ready!");
+  Serial.println("Clap near the mic (or press button in simulator)");
+}
+
+void loop() {
+  // Read digital threshold output
+  if (digitalRead(DO_PIN) == HIGH) {
+    clapCount++;
+    digitalWrite(LED_PIN, HIGH);
+    Serial.print("CLAP #");
+    Serial.println(clapCount);
+    delay(200);  // debounce
+    digitalWrite(LED_PIN, LOW);
+  }
+
+  // Read raw analog sound level
+  int volume = analogRead(A0);
+  if (volume > 600) {
+    Serial.print("Loud sound! Level: ");
+    Serial.println(volume);
+  }
+
+  delay(50);
+}
+`,
+    challenge: 'Build a clap-toggle light: one clap turns the LED on, the next clap turns it off. Track whether the LED is currently on and toggle it on each clap detection.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('CLAP') || l.includes('clap') || l.includes('Clap'));
+    },
+  },
+
+  {
+    id: 'joystick',
+    icon: '🕹️',
+    title: 'Analog Joystick',
+    xp: 60,
+    difficulty: 'beginner',
+    desc: 'Read a dual-axis analog joystick with push-button click. Map the X/Y axes to directions and use the joystick for games, robot control, or menu navigation.',
+    parts: ['Arduino Uno', 'KY-023 joystick module', 'Breadboard', 'Jumper wires'],
+    skills: ['analogRead()', 'Dual-axis input', 'map()', 'Direction detection'],
+    components: [{ type: 'button', pin: 10 }],
+    wiring: [
+      'Joystick VCC → 5V',
+      'Joystick GND → GND',
+      'Joystick VRX (X axis) → A0',
+      'Joystick VRY (Y axis) → A1',
+      'Joystick SW (push button) → Pin 10',
+    ],
+    theory: `
+## KY-023 Joystick Module
+
+The joystick has two **potentiometers** (one per axis) and a **push-button** that activates when you press the stick down.
+
+### Reading the Axes
+
+Each axis outputs 0–5V which analogRead() converts to 0–1023:
+
+| Position | X (A0) | Y (A1) |
+|----------|--------|--------|
+| Center   | ~512   | ~512   |
+| Left     | ~0     | —      |
+| Right    | ~1023  | —      |
+| Up       | —      | ~0     |
+| Down     | —      | ~1023  |
+
+> Note: exact values vary by module — always center-test first.
+
+### Dead Zone
+
+Joysticks have mechanical slop. Add a **dead zone** of ±50 around center to avoid phantom movements:
+
+\`\`\`cpp
+if (abs(xVal - 512) < 50) xVal = 512;  // snap to center
+\`\`\`
+
+### Push Button
+
+The SW pin uses INPUT_PULLUP — LOW when pressed:
+
+\`\`\`cpp
+pinMode(SW_PIN, INPUT_PULLUP);
+bool clicked = (digitalRead(SW_PIN) == LOW);
+\`\`\`
+
+### Wiring
+
+\`\`\`
+    Arduino      KY-023
+    5V    ─────  VCC
+    GND   ─────  GND
+    A0    ─────  VRX  (X axis)
+    A1    ─────  VRY  (Y axis)
+    Pin 10 ────  SW   (button)
+\`\`\`
+
+### Simulator
+Use **A0 slider** = X axis, **A1 slider** = Y axis. The **Pin 10 button** = joystick click.
+    `,
+    starterCode: `// KY-023 Dual-Axis Joystick
+// X → A0, Y → A1, Click → Pin 10
+// Simulator: A0/A1 sliders = axes, Pin10 button = click
+
+const int SW_PIN = 10;  // Joystick push button
+
+void setup() {
+  pinMode(SW_PIN, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("Joystick ready!");
+  Serial.println("Move A0/A1 sliders, press Pin10 button.");
+}
+
+void loop() {
+  int xRaw = analogRead(A0);  // 0-1023
+  int yRaw = analogRead(A1);  // 0-1023
+  bool clicked = (digitalRead(SW_PIN) == LOW);
+
+  // Map to -100..+100 range for easier use
+  int x = map(xRaw, 0, 1023, -100, 100);
+  int y = map(yRaw, 0, 1023, -100, 100);
+
+  // Dead zone: ignore small center wobble
+  if (abs(x) < 10) x = 0;
+  if (abs(y) < 10) y = 0;
+
+  // Determine direction
+  String dir = "CENTER";
+  if      (x < -30) dir = "LEFT";
+  else if (x >  30) dir = "RIGHT";
+  if      (y < -30) dir = (dir == "CENTER") ? "UP" : dir + "-UP";
+  else if (y >  30) dir = (dir == "CENTER") ? "DOWN" : dir + "-DOWN";
+
+  Serial.print("X:");
+  Serial.print(x);
+  Serial.print("  Y:");
+  Serial.print(y);
+  Serial.print("  Dir: ");
+  Serial.print(dir);
+  if (clicked) Serial.print("  [CLICK!]");
+  Serial.println();
+
+  delay(150);
+}
+`,
+    challenge: 'Use the joystick X axis to control a servo (Servo library on Pin 9). Map X (0–1023) to servo angle (0°–180°). Moving the joystick left/right should swing the servo arm.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('LEFT') || l.includes('RIGHT') || l.includes('CENTER') || l.includes('X:'));
+    },
+  },
+
+  {
+    id: 'lcd_i2c',
+    icon: '📺',
+    title: 'LCD 16×2 with I2C',
+    xp: 80,
+    difficulty: 'intermediate',
+    desc: 'Display text and sensor data on a 16-character × 2-row LCD using only 2 wires (I2C). Learn the LiquidCrystal_I2C library and build a real-time data display.',
+    parts: ['Arduino Uno', '16×2 LCD with I2C backpack (PCF8574)', 'Breadboard', 'Jumper wires'],
+    skills: ['LiquidCrystal_I2C', 'lcd.setCursor()', 'lcd.print()', 'lcd.clear()', 'I2C display'],
+    components: [{ type: 'lcd' }],
+    wiring: [
+      'LCD I2C module VCC → 5V',
+      'LCD I2C module GND → GND',
+      'LCD I2C module SDA → A4',
+      'LCD I2C module SCL → A5',
+      'Most I2C backpacks use address 0x27 or 0x3F — try both if display is blank',
+    ],
+    theory: `
+## LCD 16×2 with I2C Backpack
+
+A standard 16×2 LCD needs 6–11 wires. The **I2C backpack** (PCF8574 port expander) reduces this to just **4 wires**: VCC, GND, SDA, SCL.
+
+### Display Layout
+
+\`\`\`
+  Col:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+Row 0: [H][e][l][l][o][ ][W][o][r][l][d][!][ ][ ][ ][ ]
+Row 1: [T][e][m][p][:][ ][2][3][.][5][°][C][ ][ ][ ][ ]
+\`\`\`
+
+### LiquidCrystal_I2C Library
+
+\`\`\`cpp
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);  // addr, cols, rows
+
+void setup() {
+  lcd.init();          // initialize the LCD
+  lcd.backlight();     // turn on backlight
+  lcd.setCursor(0, 0); // col 0, row 0
+  lcd.print("Hello!");
+  lcd.setCursor(0, 1); // col 0, row 1
+  lcd.print("World!");
+}
+\`\`\`
+
+### Key Functions
+
+| Function | What it does |
+|----------|-------------|
+| \`lcd.init()\` | Initialize display |
+| \`lcd.backlight()\` | Turn on backlight |
+| \`lcd.clear()\` | Clear screen, cursor → 0,0 |
+| \`lcd.setCursor(col, row)\` | Move cursor |
+| \`lcd.print(val)\` | Print text/numbers |
+| \`lcd.noBacklight()\` | Turn off backlight |
+
+### Finding Your I2C Address
+
+Run an I2C scanner sketch — it will print all detected addresses. Common addresses: **0x27** and **0x3F**.
+
+### Simulator
+The LCD component shows a real 16×2 display that updates live as your code calls lcd.print(). Call lcd.backlight() to turn it on.
+    `,
+    starterCode: `// LCD 16x2 with I2C Backpack
+// SDA → A4, SCL → A5
+// Most common address: 0x27 (try 0x3F if blank)
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int counter = 0;
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  Serial.begin(9600);
+
+  // Welcome message
+  lcd.setCursor(0, 0);
+  lcd.print("Arduino LCD Demo");
+  lcd.setCursor(0, 1);
+  lcd.print("   Hello World! ");
+
+  Serial.println("LCD initialized!");
+  delay(2000);
+}
+
+void loop() {
+  counter++;
+
+  // Row 0: uptime in seconds
+  lcd.setCursor(0, 0);
+  lcd.print("Uptime: ");
+  lcd.print(millis() / 1000);
+  lcd.print("s   ");  // spaces erase old digits
+
+  // Row 1: counter
+  lcd.setCursor(0, 1);
+  lcd.print("Count:  ");
+  lcd.print(counter);
+  lcd.print("     ");
+
+  Serial.print("LCD updated. Count: ");
+  Serial.println(counter);
+
+  delay(500);
+}
+`,
+    challenge: 'Add a potentiometer (A0 slider) that displays its value as a percentage bar on row 1 using block characters. Hint: map A0 (0-1023) to 0-16 filled spaces, then pad with empty spaces to always fill 16 chars.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('LCD') || l.includes('Count') || l.includes('initialized'));
+    },
+  },
+
+  {
+    id: 'continuous_servo',
+    icon: '🌀',
+    title: 'Continuous Rotation Servo',
+    xp: 65,
+    difficulty: 'intermediate',
+    desc: 'Control a continuous rotation servo for wheeled robots and conveyors. Learn how writeMicroseconds() sets speed and direction instead of position.',
+    parts: ['Arduino Uno', 'FS90R or modified continuous servo', 'Breadboard', 'Jumper wires'],
+    skills: ['Servo library', 'writeMicroseconds()', 'Speed control', 'Direction reversal'],
+    components: [{ type: 'servo', pin: 9 }],
+    wiring: [
+      'Servo signal (orange) → Pin 9',
+      'Servo VCC (red) → 5V (external supply recommended for heavy servos)',
+      'Servo GND (brown/black) → GND (shared with Arduino)',
+    ],
+    theory: `
+## Standard vs. Continuous Rotation Servo
+
+| Feature | Standard Servo | Continuous Servo |
+|---------|---------------|-----------------|
+| Output | Angle (0°–180°) | Speed + Direction |
+| write(90) | Hold center | **Stop** |
+| write(0)  | Go to 0° | Full speed CW |
+| write(180)| Go to 180° | Full speed CCW |
+| Feedback | Internal pot | None |
+
+A continuous servo has its internal feedback pot **removed or bypassed** — so the motor just keeps spinning.
+
+### writeMicroseconds() for Fine Control
+
+\`write(angle)\` is coarse. Use \`writeMicroseconds()\` for precise speed control:
+
+| µs value | Behavior |
+|----------|---------|
+| 1500 | Stop (neutral) |
+| < 1500 | CW (lower = faster) |
+| > 1500 | CCW (higher = faster) |
+| 1000 | Full speed CW |
+| 2000 | Full speed CCW |
+
+\`\`\`cpp
+servo.writeMicroseconds(1400);  // slow CW
+servo.writeMicroseconds(1500);  // stop
+servo.writeMicroseconds(1600);  // slow CCW
+\`\`\`
+
+> **Calibration tip:** The exact stop point varies by servo (usually 1490–1510 µs). Adjust until it truly stops.
+
+### Simulator
+The servo arm shows the pulse position (not rotation speed). \`write(90)\` stops it, lower values spin CW, higher CCW.
+    `,
+    starterCode: `// Continuous Rotation Servo
+// Signal → Pin 9
+// writeMicroseconds: 1500 = stop, 1000 = full CW, 2000 = full CCW
+#include <Servo.h>
+
+Servo contServo;
+
+const int SERVO_PIN = 9;
+const int STOP  = 1500;  // calibrate this: try 1490–1510
+const int SLOW  = 100;   // offset from STOP for slow speed
+const int FAST  = 400;   // offset from STOP for fast speed
+
+void setup() {
+  contServo.attach(SERVO_PIN);
+  contServo.writeMicroseconds(STOP);  // start stopped
+  Serial.begin(9600);
+  Serial.println("Continuous servo ready!");
+}
+
+void loop() {
+  Serial.println("Spinning CW slow (2s)...");
+  contServo.writeMicroseconds(STOP - SLOW);  // CW
+  delay(2000);
+
+  Serial.println("Stopping (1s)...");
+  contServo.writeMicroseconds(STOP);
+  delay(1000);
+
+  Serial.println("Spinning CCW fast (2s)...");
+  contServo.writeMicroseconds(STOP + FAST);  // CCW
+  delay(2000);
+
+  Serial.println("Stopping (1s)...");
+  contServo.writeMicroseconds(STOP);
+  delay(1000);
+}
+`,
+    challenge: 'Use the A0 slider to control the continuous servo in real time. Map A0 (0–1023) to µs (1000–2000). The center position (A0=512) should stop the servo.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('CW') || l.includes('CCW') || l.includes('Spinning') || l.includes('servo'));
+    },
+  },
+
+  {
+    id: 'dht11_sensor',
+    icon: '🌡️',
+    title: 'DHT11 Temperature & Humidity',
+    xp: 70,
+    difficulty: 'intermediate',
+    desc: 'Read temperature and humidity from a DHT11 sensor using a single data wire. Build a weather station that logs readings to the serial monitor.',
+    parts: ['Arduino Uno', 'DHT11 sensor module', '1x LED', '220Ω resistor', 'Breadboard'],
+    skills: ['DHT library', 'isnan()', 'Sensor libraries', 'Data formatting'],
+    components: [],
+    wiring: [
+      'DHT11 VCC → 5V',
+      'DHT11 GND → GND',
+      'DHT11 DATA → Pin 4',
+      'If bare sensor (not module): add 10kΩ pull-up resistor from DATA to VCC',
+      'Wait 2 seconds between readings or data will be stale',
+    ],
+    theory: `
+## DHT11 Sensor
+
+The DHT11 uses a proprietary single-wire protocol to send temperature and humidity in a 40-bit packet. The DHT.h library handles all the timing automatically.
+
+### Specifications
+
+| Measurement | Range | Accuracy | Resolution |
+|-------------|-------|----------|------------|
+| Temperature | 0–50°C | ±2°C | 1°C |
+| Humidity | 20–90% RH | ±5% RH | 1% |
+
+> For better accuracy use **DHT22**: -40–80°C, ±0.5°C, 0–100% RH.
+
+### Library Usage
+
+\`\`\`cpp
+#include <DHT.h>
+#define DHTPIN 4
+#define DHTTYPE DHT11
+
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() { dht.begin(); }
+
+void loop() {
+  float temp = dht.readTemperature();  // °C
+  float hum  = dht.readHumidity();     // %
+  if (isnan(temp) || isnan(hum)) {
+    Serial.println("Read failed!");
+    return;
+  }
+  delay(2000);  // minimum between reads
+}
+\`\`\`
+
+### isnan() Check
+
+Always check for NaN (Not a Number) — if the read fails (bad wiring, too fast), the library returns NaN:
+
+\`\`\`cpp
+if (isnan(temp)) { Serial.println("Error!"); return; }
+\`\`\`
+
+### Simulator
+**A0 slider** = Temperature (maps to 0–50°C). **A1 slider** = Humidity (maps to 20–90% RH). The DHT stub reads these sliders automatically.
+    `,
+    starterCode: `// DHT11 Temperature & Humidity Sensor
+// DATA → Pin 4
+// Simulator: A0 slider = temperature (0-50°C), A1 = humidity (20-90%)
+#include <DHT.h>
+
+#define DHTPIN  4
+#define DHTTYPE DHT11
+
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  dht.begin();
+  Serial.begin(9600);
+  Serial.println("DHT11 Weather Station ready!");
+  Serial.println("A0 slider = temp, A1 slider = humidity");
+  delay(2000);  // sensor stabilization
+}
+
+void loop() {
+  float temperature = dht.readTemperature();  // Celsius
+  float humidity    = dht.readHumidity();     // %
+
+  // Always check for read errors
+  if (isnan(temperature) || isnan(humidity)) {
+    Serial.println("Error: DHT read failed! Check wiring.");
+    delay(2000);
+    return;
+  }
+
+  // Compute heat index (feels-like temperature)
+  float heatIndex = dht.computeHeatIndex(temperature, humidity, false);
+
+  Serial.print("Temp: ");
+  Serial.print(temperature, 1);
+  Serial.print("°C  Humidity: ");
+  Serial.print(humidity, 1);
+  Serial.print("%  Feels like: ");
+  Serial.print(heatIndex, 1);
+  Serial.println("°C");
+
+  // Simple comfort indicator
+  if (temperature > 30 && humidity > 70) {
+    Serial.println("  >> Uncomfortable: hot & humid");
+  } else if (temperature < 15) {
+    Serial.println("  >> Cold! Bundle up.");
+  } else {
+    Serial.println("  >> Comfortable range.");
+  }
+
+  delay(2000);  // DHT11 needs minimum 2s between reads
+}
+`,
+    challenge: 'Add the LCD display (lesson before): show temperature on row 0 and humidity on row 1 of a 16×2 LCD. Format: "Temp: 23.5 C" and "Hum:  65 %".',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('Temp') || l.includes('°C') || l.includes('Humidity'));
+    },
+  },
+
+  {
+    id: 'relay_module',
+    icon: '⚡',
+    title: 'Relay Module',
+    xp: 65,
+    difficulty: 'intermediate',
+    desc: 'Control high-voltage devices (AC lights, pumps, motors) safely from your Arduino using a relay module. Learn active-LOW logic and why isolation is critical.',
+    parts: ['Arduino Uno', '1-channel 5V relay module', 'LED (to simulate load)', '220Ω resistor', 'Breadboard'],
+    skills: ['digitalWrite()', 'Active-LOW logic', 'Relay switching', 'Safety practices'],
+    components: [],
+    wiring: [
+      'Relay module VCC → 5V',
+      'Relay module GND → GND',
+      'Relay module IN → Pin 7',
+      'Connect LED between relay COM and NO terminals (safe low-voltage test)',
+      'NEVER connect mains voltage without proper insulation and experience',
+    ],
+    theory: `
+## What is a Relay?
+
+A relay is an electrically-operated mechanical switch. A small control signal (5V from Arduino) triggers an electromagnet that physically moves a switch contact — allowing it to control large currents completely isolated from the Arduino.
+
+### Relay Terminals
+
+\`\`\`
+   ┌─────────────────┐
+   │  Relay Module   │
+   │                 │
+   │  IN ← Arduino  │
+   │  VCC / GND      │
+   │                 │
+   │  COM ────────   │  ← Common terminal
+   │  NO  ─── ↗     │  ← Normally Open  (open when relay off)
+   │  NC  ─── ↘     │  ← Normally Closed (closed when relay off)
+   └─────────────────┘
+\`\`\`
+
+### Active-LOW Logic
+
+Most relay modules are **active LOW** — they trigger when IN is pulled LOW:
+
+| Arduino Pin | IN Signal | Relay | COM–NO |
+|-------------|-----------|-------|--------|
+| HIGH (1)    | HIGH      | OFF   | Open   |
+| LOW (0)     | LOW       | ON    | Closed |
+
+\`\`\`cpp
+digitalWrite(RELAY_PIN, LOW);   // TURN ON the relay
+digitalWrite(RELAY_PIN, HIGH);  // turn off the relay
+\`\`\`
+
+### Safety Rules
+
+⚠️ **NEVER work on mains-connected relays while powered.** Even 5-amp relays can kill. For learning, test only with LEDs or small DC loads.
+
+### Simulator
+Watch Pin 7 LED in the digital pin row — it turns ON when relay is activated (LOW signal). The Serial Monitor shows the relay state.
+    `,
+    starterCode: `// Relay Module — Active-LOW Control
+// IN → Pin 7  (LOW = relay ON, HIGH = relay OFF)
+// Watch pin 7 LED in the simulator
+
+const int RELAY_PIN = 7;
+
+void relayOn()  { digitalWrite(RELAY_PIN, LOW);  }  // Active LOW!
+void relayOff() { digitalWrite(RELAY_PIN, HIGH); }
+
+void setup() {
+  pinMode(RELAY_PIN, OUTPUT);
+  relayOff();  // Start with relay off (safe default)
+  Serial.begin(9600);
+  Serial.println("Relay module ready!");
+  Serial.println("Note: Most relay modules are ACTIVE LOW");
+}
+
+void loop() {
+  Serial.println("Relay ON  (closing circuit)...");
+  relayOn();
+  delay(2000);
+
+  Serial.println("Relay OFF (opening circuit)...");
+  relayOff();
+  delay(2000);
+
+  // Quick 3-pulse sequence
+  Serial.println("3 quick pulses...");
+  for (int i = 0; i < 3; i++) {
+    relayOn();
+    delay(200);
+    relayOff();
+    delay(200);
+  }
+  delay(1000);
+}
+`,
+    challenge: 'Add a button (Pin 2, INPUT_PULLUP) that toggles the relay on each press. Use a boolean `relayState` variable and only change the relay when the button is freshly pressed (not held).',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('Relay') || l.includes('relay'));
+    },
+  },
+
+  {
+    id: 'shift_register',
+    icon: '🔢',
+    title: '74HC595 Shift Register',
+    xp: 85,
+    difficulty: 'advanced',
+    desc: 'Control 8 LEDs using only 3 Arduino pins with a 74HC595 shift register. Learn serial-to-parallel data shifting, the shiftOut() function, and daisy-chaining for even more outputs.',
+    parts: ['Arduino Uno', '74HC595 shift register IC', '8x LEDs', '8x 220Ω resistors', 'Breadboard', 'Jumper wires'],
+    skills: ['shiftOut()', 'Bit manipulation', 'Shift registers', 'MSBFIRST/LSBFIRST', 'Daisy-chaining'],
+    components: [],
+    wiring: [
+      '74HC595 Pin 14 (DS/SER) → Pin 11 (data)',
+      '74HC595 Pin 12 (RCLK/ST_CP) → Pin 10 (latch)',
+      '74HC595 Pin 11 (SHCP/SH_CP) → Pin 12 (clock)',
+      '74HC595 Pin 16 (VCC) → 5V',
+      '74HC595 Pin 8 (GND) → GND',
+      '74HC595 Pin 10 (MR/SRCLR) → 5V (active LOW reset, tie HIGH to disable)',
+      '74HC595 Pin 13 (OE) → GND (output enable, active LOW)',
+      'Pins Q0–Q7 (15, 1–7) → LEDs through 220Ω resistors to GND',
+    ],
+    theory: `
+## What is a Shift Register?
+
+A 74HC595 converts **serial** data (3 wires) into **8 parallel** outputs. You can control 8 devices with just 3 Arduino pins instead of 8.
+
+### How it Works
+
+1. Set **latch LOW** (hold outputs steady)
+2. Clock in 8 bits of data serially via **data** pin
+3. Set **latch HIGH** — all 8 outputs update simultaneously
+
+\`\`\`
+  Arduino              74HC595
+  DATA  (11) ────────  DS  (pin 14)   serial input
+  CLOCK (12) ────────  SHCP (pin 11)  shift clock
+  LATCH (10) ────────  STCP (pin 12)  latch clock
+\`\`\`
+
+### shiftOut()
+
+Arduino's built-in function handles the clocking automatically:
+
+\`\`\`cpp
+digitalWrite(LATCH, LOW);
+shiftOut(DATA, CLOCK, MSBFIRST, 0b10110011);
+//                    bit order   8-bit value
+digitalWrite(LATCH, HIGH);
+\`\`\`
+
+**MSBFIRST**: Most significant bit first (Q7=bit7, Q0=bit0)
+
+### Binary Patterns
+
+\`\`\`cpp
+shiftOut(DATA, CLOCK, MSBFIRST, 0b11111111);  // all LEDs ON
+shiftOut(DATA, CLOCK, MSBFIRST, 0b10101010);  // alternating
+shiftOut(DATA, CLOCK, MSBFIRST, 0b00000001);  // only Q0
+\`\`\`
+
+### Daisy-Chaining
+
+Connect Q7S (pin 9) of the first chip to DS of a second 74HC595 — share the same CLOCK and LATCH. Now send 16 bits to control 16 outputs from 3 pins!
+
+### Simulator
+Watch digital pins 2–9 in the simulator to see the shifting pattern (pins represent the 8 outputs Q0–Q7).
+    `,
+    starterCode: `// 74HC595 Shift Register — 8 LEDs with 3 pins
+// DATA → Pin 11, CLOCK → Pin 12, LATCH → Pin 10
+
+const int DATA  = 11;
+const int CLOCK = 12;
+const int LATCH = 10;
+
+// Send one byte to shift register
+void shiftWrite(byte val) {
+  digitalWrite(LATCH, LOW);              // hold outputs
+  shiftOut(DATA, CLOCK, MSBFIRST, val); // shift 8 bits
+  digitalWrite(LATCH, HIGH);            // latch to outputs
+}
+
+void setup() {
+  pinMode(DATA,  OUTPUT);
+  pinMode(CLOCK, OUTPUT);
+  pinMode(LATCH, OUTPUT);
+  Serial.begin(9600);
+  shiftWrite(0b00000000);  // all off
+  Serial.println("74HC595 Shift Register ready!");
+}
+
+void loop() {
+  // Chase effect: one LED at a time
+  Serial.println("LED chase...");
+  for (int i = 0; i < 8; i++) {
+    shiftWrite(1 << i);  // bit shift to move LED position
+    delay(150);
+  }
+
+  // All on
+  Serial.println("All ON...");
+  shiftWrite(0b11111111);
+  delay(500);
+
+  // Alternating pattern
+  Serial.println("Alternating A...");
+  shiftWrite(0b10101010);
+  delay(500);
+  Serial.println("Alternating B...");
+  shiftWrite(0b01010101);
+  delay(500);
+
+  // Count up in binary
+  Serial.println("Binary count 0-255...");
+  for (int i = 0; i <= 255; i++) {
+    shiftWrite(i);
+    delay(20);
+  }
+}
+`,
+    challenge: 'Create a "bounce" animation: light up LED 0, then shift right until LED 7, then reverse direction back to 0. Keep bouncing smoothly.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('chase') || l.includes('Chase') || l.includes('Alternating') || l.includes('Binary'));
+    },
+  },
+
+  {
+    id: 'keypad_matrix',
+    icon: '🔢',
+    title: '4×4 Matrix Keypad',
+    xp: 75,
+    difficulty: 'intermediate',
+    desc: 'Read a 16-button 4×4 keypad using only 8 wires with row/column scanning. Build a PIN-entry system that accepts a 4-digit code.',
+    parts: ['Arduino Uno', '4×4 membrane keypad', 'Breadboard', 'Jumper wires'],
+    skills: ['Keypad library', 'Matrix scanning', '2D arrays', 'State machines', 'PIN systems'],
+    components: [{ type: 'button', pin: 2 }, { type: 'button', pin: 3 }],
+    wiring: [
+      'Keypad Row 1 → Pin 9',
+      'Keypad Row 2 → Pin 8',
+      'Keypad Row 3 → Pin 7',
+      'Keypad Row 4 → Pin 6',
+      'Keypad Col 1 → Pin 5',
+      'Keypad Col 2 → Pin 4',
+      'Keypad Col 3 → Pin 3',
+      'Keypad Col 4 → Pin 2',
+    ],
+    theory: `
+## Matrix Keypad Scanning
+
+A 4×4 keypad has 16 buttons wired in a grid: 4 rows × 4 columns. Only 8 wires needed instead of 16!
+
+### How Matrix Scanning Works
+
+1. Set all row pins as **OUTPUT HIGH**
+2. Set all column pins as **INPUT_PULLUP**
+3. Pull one row LOW at a time
+4. Check which column reads LOW — that's the pressed key
+
+\`\`\`
+     Col1 Col2 Col3 Col4
+Row1 [ 1 ][ 2 ][ 3 ][ A ]
+Row2 [ 4 ][ 5 ][ 6 ][ B ]
+Row3 [ 7 ][ 8 ][ 9 ][ C ]
+Row4 [ * ][ 0 ][ # ][ D ]
+\`\`\`
+
+### Keypad Library
+
+Handles the scanning automatically:
+
+\`\`\`cpp
+#include <Keypad.h>
+
+char keys[4][4] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+byte rowPins[4] = {9, 8, 7, 6};
+byte colPins[4] = {5, 4, 3, 2};
+
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, 4, 4);
+
+char key = keypad.getKey();
+if (key) Serial.println(key);
+\`\`\`
+
+### Simulator Note
+The Keypad library requires real hardware. The simulator uses **two buttons** (Pin 2, Pin 3) plus analog slider A0 to simulate keypad input. In the standalone sketch below, we show how you'd use the Keypad library on real hardware, and a simplified simulation mode.
+    `,
+    starterCode: `// 4x4 Matrix Keypad — PIN Entry System
+// Real HW: use Keypad library (rows→9,8,7,6  cols→5,4,3,2)
+// Simulator: Pin2 btn = digit input, Pin3 btn = clear/submit
+
+// --- REAL HARDWARE CODE ---
+// Uncomment on real Arduino with Keypad library:
+/*
+#include <Keypad.h>
+const byte ROWS = 4, COLS = 4;
+char keys[ROWS][COLS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+byte rowPins[ROWS] = {9, 8, 7, 6};
+byte colPins[COLS]  = {5, 4, 3, 2};
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
+*/
+
+// --- SIMULATOR VERSION ---
+const String CORRECT_PIN = "1234";
+String enteredPin = "";
+const int BTN_DIGIT  = 2;   // adds simulated digit
+const int BTN_ACTION = 3;   // clear or submit
+
+void setup() {
+  pinMode(BTN_DIGIT,  INPUT_PULLUP);
+  pinMode(BTN_ACTION, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("PIN Entry System");
+  Serial.println("Correct PIN: 1234");
+  Serial.println("Pin2 = enter digit  |  Pin3 = clear");
+  Serial.println("Enter PIN then press Pin3 to check.");
+}
+
+void loop() {
+  // Simulate digit input from A0 slider (maps to 0-9)
+  if (digitalRead(BTN_DIGIT) == LOW) {
+    int digit = map(analogRead(A0), 0, 1023, 0, 9);
+    if (enteredPin.length() < 4) {
+      enteredPin += String(digit);
+      Serial.print("Input: ");
+      Serial.println(enteredPin);
+    }
+    delay(400);
+  }
+
+  // Clear or check PIN
+  if (digitalRead(BTN_ACTION) == LOW) {
+    if (enteredPin.length() == 0) {
+      Serial.println("PIN cleared.");
+    } else {
+      Serial.print("Checking PIN: ");
+      Serial.println(enteredPin);
+      if (enteredPin == CORRECT_PIN) {
+        Serial.println(">>> ACCESS GRANTED <<<");
+        digitalWrite(13, HIGH);
+        delay(2000);
+        digitalWrite(13, LOW);
+      } else {
+        Serial.println("!!! ACCESS DENIED !!!");
+      }
+      enteredPin = "";
+    }
+    delay(400);
+  }
+}
+`,
+    challenge: 'Add a "lockout": after 3 wrong PINs, disable input for 10 seconds (use millis()). Print a countdown every second while locked out.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('PIN') || l.includes('ACCESS') || l.includes('Input'));
+    },
+  },
 ];
+
+// ── Sort lessons: beginner → intermediate → advanced ──────
+const _DIFF_RANK = { beginner: 0, intermediate: 1, advanced: 2 };
+LESSONS.sort((a, b) => (_DIFF_RANK[a.difficulty] || 0) - (_DIFF_RANK[b.difficulty] || 0));

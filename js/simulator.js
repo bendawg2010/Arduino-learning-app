@@ -96,6 +96,13 @@ class ArduinoTranspiler {
     // "Stepper myStepper(steps, p1, p2, p3, p4);" → let myStepper = sim.createStepper(steps,p1,p2,p3,p4);
     js = js.replace(/\bStepper\s+(\w+)\s*\(/g, 'let $1 = sim.createStepper(');
 
+    // ── LCD library (LiquidCrystal & LiquidCrystal_I2C) ──
+    js = js.replace(/LiquidCrystal_I2C\s+(\w+)\s*\([^)]*\)\s*;/g, 'let $1 = sim.createLCD();');
+    js = js.replace(/LiquidCrystal\s+(\w+)\s*\([^)]*\)\s*;/g,     'let $1 = sim.createLCD();');
+
+    // ── DHT sensor library ────────────────────────────────
+    js = js.replace(/\bDHT\s+(\w+)\s*\([^)]*\)\s*;/g, 'let $1 = sim.createDHT();');
+
     // ── Math aliases ─────────────────────────────────────
     js = js.replace(/\babs\s*\(/g,   'Math.abs(');
     js = js.replace(/\bsqrt\s*\(/g,  'Math.sqrt(');
@@ -293,6 +300,61 @@ class SimObject {
           applyStep();
         }
       }
+    };
+  }
+
+  // ── LCD library stub ──────────────────────────────────
+  createLCD() {
+    const board = this._board;
+    const blank = () => '                ';
+    const lcd = {
+      _text:   [blank(), blank()],
+      _cursor: { col: 0, row: 0 },
+      init()             { board.setLCDBacklight(false); board.updateLCD(this._text); },
+      begin(cols, rows)  { board.updateLCD(this._text); },
+      backlight()        { board.setLCDBacklight(true); },
+      noBacklight()      { board.setLCDBacklight(false); },
+      clear() {
+        this._text = [blank(), blank()];
+        this._cursor = { col: 0, row: 0 };
+        board.updateLCD(this._text);
+      },
+      home()              { this._cursor = { col: 0, row: 0 }; },
+      setCursor(col, row) { this._cursor = { col: Math.max(0, col|0), row: Math.max(0, Math.min(1, row|0)) }; },
+      print(val) {
+        const str = String(val);
+        const row = this._cursor.row;
+        let arr = this._text[row].split('');
+        for (let i = 0; i < str.length; i++) {
+          const c = this._cursor.col + i;
+          if (c < 16) arr[c] = str[i];
+        }
+        this._text[row] = arr.join('');
+        this._cursor.col = Math.min(16, this._cursor.col + str.length);
+        board.updateLCD(this._text);
+      },
+      println(val)    { this.print(val); },
+      createChar()    { /* stub */ },
+      scrollDisplayLeft()  { /* stub */ },
+      scrollDisplayRight() { /* stub */ },
+    };
+    return lcd;
+  }
+
+  // ── DHT sensor stub ───────────────────────────────────
+  createDHT() {
+    const board = this._board;
+    return {
+      begin() {},
+      readTemperature() {
+        // Map A0 slider (0-1023) to 0-50°C
+        return Math.round((board.getAnalog(0) / 1023) * 50);
+      },
+      readHumidity() {
+        // Map A1 slider (0-1023) to 20-90% RH
+        return Math.round(20 + (board.getAnalog(1) / 1023) * 70);
+      },
+      isnan(v) { return isNaN(v); },
     };
   }
 }
@@ -505,6 +567,18 @@ class ArduinoBoard {
             </div>
             <div class="comp-label">IMU · I2C (SDA:A4 SCL:A5)</div>
           </div>`;
+      } else if (comp.type === 'lcd') {
+        this._lcdText = ['                ', '                '];
+        html += `
+          <div class="comp-item comp-lcd-item">
+            <div class="comp-lcd" id="sim-lcd-comp">
+              <div class="lcd-screen" id="sim-lcd-display">
+                <div class="lcd-row" id="lcd-row-0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                <div class="lcd-row" id="lcd-row-1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+              </div>
+            </div>
+            <div class="comp-label">LCD 16×2 · I2C 0x27</div>
+          </div>`;
       }
     });
 
@@ -563,6 +637,19 @@ class ArduinoBoard {
       const lbl = document.getElementById(`stepper-step-${pins[0]}`);
       if (lbl) lbl.textContent = `Step: ${this._stepperCount}`;
     }
+  }
+
+  // ── LCD display ───────────────────────────────────────
+  updateLCD(text) {
+    this._lcdText = [...text];
+    for (let r = 0; r < 2; r++) {
+      const el = document.getElementById(`lcd-row-${r}`);
+      if (el) el.textContent = (text[r] || '').padEnd(16).substring(0, 16);
+    }
+  }
+  setLCDBacklight(on) {
+    const el = document.getElementById('sim-lcd-comp');
+    if (el) el.classList.toggle('on', on);
   }
 
   // ── IMU display ───────────────────────────────────────
@@ -916,6 +1003,14 @@ class ArduinoBoard {
     if (rv) rv.textContent = 'R:0';
     if (gv) gv.textContent = 'G:0';
     if (bv) bv.textContent = 'B:0';
+    // Reset LCD
+    this._lcdText = ['                ', '                '];
+    for (let r = 0; r < 2; r++) {
+      const el = document.getElementById(`lcd-row-${r}`);
+      if (el) el.textContent = '                ';
+    }
+    const lcdComp = document.getElementById('sim-lcd-comp');
+    if (lcdComp) lcdComp.classList.remove('on');
   }
 
   _updateStatus(state) {

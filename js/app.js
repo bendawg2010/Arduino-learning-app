@@ -743,12 +743,15 @@ function updateSidebarChecks() {
 // ── Free Code Playground ─────────────────────────────────
 // Hardware component definitions for playground
 const PG_COMPONENTS = [
-  { id: 'button',  label: '🔘 Button',   type: 'button',  pin: 2  },
-  { id: 'buzzer',  label: '🔔 Buzzer',   type: 'buzzer',  pin: 8  },
-  { id: 'servo',   label: '⚙️ Servo',    type: 'servo',   pin: 9  },
-  { id: 'rgb',     label: '🌈 RGB LED',  type: 'rgb',     pins: [9,10,11] },
-  { id: 'led2',    label: '💡 LED (2)',   type: 'led',     pin: 2  },
-  { id: 'pot',     label: '🎛️ Pot (A1)', type: 'pot',     pin: 1  },
+  { id: 'button',     label: '🔘 Button',      type: 'button',     pin: 2 },
+  { id: 'buzzer',     label: '🔔 Buzzer',       type: 'buzzer',     pin: 8 },
+  { id: 'servo',      label: '⚙️ Servo',        type: 'servo',      pin: 9 },
+  { id: 'rgb',        label: '🌈 RGB LED',      type: 'rgb',        pins: { r: 9, g: 10, b: 11 } },
+  { id: 'ultrasonic', label: '📡 Ultrasonic',   type: 'ultrasonic', trigPin: 9, echoPin: 10 },
+  { id: 'motor',      label: '🔄 DC Motor',     type: 'motor',      enablePin: 6, in1Pin: 7, in2Pin: 8 },
+  { id: 'stepper',    label: '⚙️ Stepper',      type: 'stepper',    pins: [8, 9, 10, 11] },
+  { id: 'imu',        label: '🔵 IMU',          type: 'imu' },
+  { id: 'lcd',        label: '📺 LCD 16×2',     type: 'lcd' },
 ];
 let pgActiveComponents = new Set();
 
@@ -868,12 +871,11 @@ function rebuildPlaygroundBoard() {
   pgActiveComponents.forEach(cid => {
     const def = PG_COMPONENTS.find(c => c.id === cid);
     if (!def) return;
-    if (def.pins) {
-      // RGB LED — add as three separate LEDs
-      def.pins.forEach((pin, i) => components.push({ type: 'led', pin }));
-    } else {
-      components.push({ type: def.type, pin: def.pin });
-    }
+    // Pass full component config (strip UI-only fields)
+    const comp = Object.assign({}, def);
+    delete comp.id;
+    delete comp.label;
+    components.push(comp);
   });
   board = new ArduinoBoard(simBody, components);
 }

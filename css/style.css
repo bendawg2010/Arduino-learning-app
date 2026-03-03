@@ -1398,6 +1398,44 @@ html { overscroll-behavior: none; }
   color: var(--text3);
 }
 
+/* ── LCD 16×2 Component ─────────────────────────────────── */
+.comp-lcd-item { align-items: stretch; }
+.comp-lcd {
+  background: #0d2b0d;
+  border: 3px solid #1a4a1a;
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-width: 192px;
+  transition: background .3s, box-shadow .3s;
+}
+.comp-lcd.on {
+  background: #1a3d1a;
+  box-shadow: 0 0 14px rgba(0, 220, 0, 0.18);
+}
+.lcd-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.lcd-row {
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  font-size: .88rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  white-space: pre;
+  background: #0a1f0a;
+  color: #006600;
+  padding: 3px 6px;
+  border-radius: 3px;
+  min-width: 180px;
+  text-shadow: none;
+  transition: color .3s, text-shadow .3s;
+}
+.comp-lcd.on .lcd-row {
+  color: #00e000;
+  text-shadow: 0 0 6px #00cc00;
+}
+
 /* ── IMU Component ───────────────────────────────────────── */
 .comp-imu-item { align-items: stretch; }
 .comp-imu {
