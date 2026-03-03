@@ -19,18 +19,24 @@ const LEVELS = [
 
 // ── Achievements ──────────────────────────────────────────
 const ACHIEVEMENTS = [
-  { id: 'first_lesson',    icon: '🚀', name: 'First Steps',     desc: 'Complete your very first lesson.',                  cond: s => s.completedLessons.length >= 1  },
-  { id: 'blink_master',    icon: '💡', name: 'Blink Master',    desc: 'Complete the Blink lesson.',                        cond: s => s.completedLessons.includes('blink')  },
-  { id: 'quiz_ace',        icon: '🎯', name: 'Quiz Ace',        desc: 'Answer a quiz question correctly.',                 cond: s => Object.values(s.quizScores).some(v => v >= 100)  },
-  { id: 'five_lessons',    icon: '🔥', name: 'On Fire',         desc: 'Complete 5 lessons.',                               cond: s => s.completedLessons.length >= 5  },
-  { id: 'all_lessons',     icon: '🎓', name: 'Graduate',        desc: 'Complete all 31 lessons.',                          cond: s => s.completedLessons.length >= 31 },
-  { id: 'serial_user',     icon: '📡', name: 'Talker',          desc: 'Use Serial.println() in your code.',                cond: s => s.serialUsed  },
-  { id: 'pwm_user',        icon: '🌈', name: 'Fader',           desc: 'Use analogWrite() for PWM.',                        cond: s => s.pwmUsed     },
-  { id: 'first_challenge', icon: '💪', name: 'Challenger',      desc: 'Pass your first challenge.',                        cond: s => s.challengesPassed >= 1  },
-  { id: 'five_challenges', icon: '🏋️', name: 'Iron Coder',     desc: 'Pass 5 challenges.',                                cond: s => s.challengesPassed >= 5  },
-  { id: 'first_try',       icon: '⚡', name: 'First Try!',      desc: 'Pass a challenge on the first attempt.',            cond: s => s.firstTryPasses >= 1    },
-  { id: 'xp_500',          icon: '⭐', name: 'XP Grinder',      desc: 'Earn 500 total XP.',                                cond: s => s.xp >= 500   },
-  { id: 'xp_1000',         icon: '🌟', name: 'XP Master',       desc: 'Earn 1000 total XP.',                               cond: s => s.xp >= 1000  },
+  { id: 'first_lesson',    icon: '🚀', name: 'First Steps',       desc: 'Complete your very first lesson.',                    cond: s => s.completedLessons.length >= 1   },
+  { id: 'blink_master',    icon: '💡', name: 'Blink Master',      desc: 'Complete the Blink lesson.',                          cond: s => s.completedLessons.includes('blink')  },
+  { id: 'quiz_ace',        icon: '🎯', name: 'Quiz Ace',          desc: 'Answer a quiz question correctly.',                   cond: s => Object.values(s.quizScores).some(v => v >= 100)  },
+  { id: 'five_lessons',    icon: '🔥', name: 'On Fire',           desc: 'Complete 5 lessons.',                                 cond: s => s.completedLessons.length >= 5   },
+  { id: 'ten_lessons',     icon: '🎖️', name: 'Committed',        desc: 'Complete 10 lessons.',                                cond: s => s.completedLessons.length >= 10  },
+  { id: 'halfway',         icon: '🏅', name: 'Halfway There',     desc: 'Complete 24 lessons (half the course).',              cond: s => s.completedLessons.length >= 24  },
+  { id: 'all_lessons',     icon: '🎓', name: 'Graduate',          desc: 'Complete all 48 lessons.',                            cond: s => s.completedLessons.length >= 48  },
+  { id: 'hardware_fan',    icon: '🔌', name: 'Hardware Fan',      desc: 'Complete 5 real-hardware lessons.',                   cond: s => ['ultrasonic_sensor','dc_motor_hbridge','stepper_motor','imu_sensor','ir_remote','servo_potentiometer','rotary_encoder','ir_sensor','pir_motion','microphone_sensor','joystick','lcd_i2c','continuous_servo','dht11_sensor','relay_module','shift_register','keypad_matrix'].filter(id => s.completedLessons.includes(id)).length >= 5  },
+  { id: 'hardware_master', icon: '🤖', name: 'Hardware Master',   desc: 'Complete all 17 real-hardware lessons.',              cond: s => ['ultrasonic_sensor','dc_motor_hbridge','stepper_motor','imu_sensor','ir_remote','servo_potentiometer','rotary_encoder','ir_sensor','pir_motion','microphone_sensor','joystick','lcd_i2c','continuous_servo','dht11_sensor','relay_module','shift_register','keypad_matrix'].every(id => s.completedLessons.includes(id))  },
+  { id: 'serial_user',     icon: '📡', name: 'Talker',            desc: 'Use Serial.println() in your code.',                  cond: s => s.serialUsed  },
+  { id: 'pwm_user',        icon: '🌈', name: 'Fader',             desc: 'Use analogWrite() for PWM.',                          cond: s => s.pwmUsed     },
+  { id: 'first_challenge', icon: '💪', name: 'Challenger',        desc: 'Pass your first challenge.',                          cond: s => s.challengesPassed >= 1  },
+  { id: 'five_challenges', icon: '🏋️', name: 'Iron Coder',       desc: 'Pass 5 challenges.',                                  cond: s => s.challengesPassed >= 5  },
+  { id: 'ten_challenges',  icon: '🦾', name: 'Challenge Beast',   desc: 'Pass 10 challenges.',                                 cond: s => s.challengesPassed >= 10 },
+  { id: 'first_try',       icon: '⚡', name: 'First Try!',        desc: 'Pass a challenge on the first attempt.',              cond: s => s.firstTryPasses >= 1    },
+  { id: 'xp_500',          icon: '⭐', name: 'XP Grinder',        desc: 'Earn 500 total XP.',                                  cond: s => s.xp >= 500   },
+  { id: 'xp_1000',         icon: '🌟', name: 'XP Master',         desc: 'Earn 1000 total XP.',                                 cond: s => s.xp >= 1000  },
+  { id: 'xp_2000',         icon: '💎', name: 'XP Legend',         desc: 'Earn 2000 total XP.',                                 cond: s => s.xp >= 2000  },
 ];
 
 // ── Lessons ───────────────────────────────────────────────
