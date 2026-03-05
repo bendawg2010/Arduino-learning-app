@@ -9,11 +9,22 @@ class ArduinoTranspiler {
   transpile(code) {
     let js = code;
 
-    // Strip preprocessor directives
-    js = js.replace(/^\s*#(include|define|pragma|ifndef|endif|ifdef)[^\n]*/gm, '');
+    // Strip preprocessor directives and single-line comments for parsing
+    js = js.replace(/^\s*#(include|define|pragma|ifndef|endif|ifdef|if|else|elif)[^\n]*/gm, '');
 
     // Servo library: "Servo myServo;" → "let myServo = sim.createServo();"
     js = js.replace(/\bServo\s+(\w+)\s*;/g, 'let $1 = sim.createServo();');
+
+    // ── C-style array declarations (MUST come before scalar type replacement) ──
+    // "type name[N] = {a, b, ...};" → "let name = [a, b, ...];"
+    js = js.replace(/\b(?:const\s+)?(?:unsigned\s+)?(?:long|int|float|double|boolean|bool|byte|char|word|short|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t|String)\s+(\w+)\s*\[\d*\]\s*=\s*\{([^}]*)\}\s*;/g,
+      'let $1 = [$2];');
+    // "type name[N];" (no initializer) → "let name = [];"
+    js = js.replace(/\b(?:const\s+)?(?:unsigned\s+)?(?:long|int|float|double|boolean|bool|byte|char|word|short|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t|String)\s+(\w+)\s*\[\d*\]\s*;/g,
+      'let $1 = [];');
+    // 2D arrays: "type name[R][C] = {{...},{...}};" → "let name = [[...],[...]];"
+    js = js.replace(/\b(?:const\s+)?(?:unsigned\s+)?(?:long|int|float|double|boolean|bool|byte|char|word|short)\s+(\w+)\s*\[\d*\]\s*\[\d*\]\s*=\s*(\{[\s\S]*?\})\s*;/g,
+      (_, name, body) => `let ${name} = ${body.replace(/\{([^{}]+)\}/g, '[$1]').replace(/\{/g,'[').replace(/\}/g,']')};`);
 
     // Unsigned / fixed-width types → let placeholder
     js = js.replace(/\bunsigned\s+(long|int|char|short)\b/g, 'let ___T');
@@ -27,6 +38,21 @@ class ArduinoTranspiler {
     js = js.replace(/\bconst\s+let\s+/g, 'const ');
     js = js.replace(/\bconst\s+___T\s+/g, 'const ');
     js = js.replace(/\blet\s+___T\s+/g, 'let ');
+
+    // Remaining C-style array subscript in declarations e.g. "let x[4]" → "let x = []"
+    js = js.replace(/\b(let|const)\s+(\w+)\s*\[\d*\]\s*(?==)/g, '$1 $2 ');
+    js = js.replace(/\b(let|const)\s+(\w+)\s*\[\d*\]\s*;/g, '$1 $2 = [];');
+
+    // C-style cast removal: "(int)", "(float)", "(long)", "(byte)" → ""
+    js = js.replace(/\(\s*(?:int|float|double|long|byte|char|bool|boolean|uint8_t|uint16_t|uint32_t)\s*\)\s*/g, '');
+
+    // String .length() → .length  (C++ method → JS property)
+    js = js.replace(/\.length\s*\(\s*\)/g, '.length');
+    // String .charAt(i) → [i]  — JS strings support bracket access
+    // (leave as-is since JS strings also have .charAt)
+    // String.toInt() → parseInt
+    js = js.replace(/\.toInt\s*\(\s*\)/g, '.toInt()');
+    // String += char in C++ is fine in JS too
 
     // for-loop initializers: "for(int i" → "for(let i"
     js = js.replace(/\bfor\s*\(\s*(?:unsigned\s+)?(?:long|int|float|double|bool|boolean|byte|char|word)\s+/g, 'for (let ');
@@ -993,6 +1019,12 @@ class ArduinoBoard {
   // ── Helpers ───────────────────────────────────────────
   _resetAllPins() {
     this._pins = {};
+    // Reset button states to unpressed so buttons work correctly on re-run
+    Object.keys(this._buttonStates).forEach(pin => {
+      this._buttonStates[pin] = false;
+      const el = document.querySelector(`.comp-button[data-pin="${pin}"]`);
+      if (el) el.classList.remove('pressed');
+    });
     const led13 = document.getElementById('sim-led-13');
     if (led13) { led13.className = 'main-led'; led13.textContent = '○'; led13.style.removeProperty('--pwm-op'); }
     [2,3,4,5,6,7,8,9,10,11,12].forEach(p => {

@@ -308,6 +308,7 @@ function renderHome() {
   return `
   <div class="dash-hero">
     <h1>Welcome to <span>ArduinoLearn</span> ⚡</h1>
+    <p style="font-size:.75rem;color:var(--text3);margin-bottom:4px">By <strong style="color:var(--blue)">Dr.yeetyt</strong></p>
     <p>Step-by-step guided lessons, a live simulator, quizzes &amp; hands-on challenges.
        Go from zero to Arduino hero — one concept at a time!</p>
     <div class="hero-btns">
@@ -860,9 +861,29 @@ function renderPlayground() {
       </div>
       <div class="lesson-nav-btns"><button onclick="navigate('home')">🏠 Home</button></div>
     </div>
-    <div class="theory-panel">
-      <div class="panel-tabs"><div class="panel-tab active">📋 Snippets</div></div>
-      <div class="panel-content">
+    <div class="theory-panel" style="overflow:hidden;display:flex;flex-direction:column">
+      <div class="panel-tabs" style="flex-shrink:0;display:flex;gap:4px;padding:8px 12px 0">
+        <div class="panel-tab active" id="pg-tab-wire" onclick="pgSwitchTab('wire')" style="cursor:pointer">🔌 Wiring</div>
+        <div class="panel-tab" id="pg-tab-snippets" onclick="pgSwitchTab('snippets')" style="cursor:pointer">📋 Snippets</div>
+      </div>
+      <div id="pg-panel-wire" class="panel-content" style="overflow-y:auto;flex:1">
+        <p style="color:var(--text3);font-size:.82rem;margin-bottom:10px">Click components to add them to the simulator. See pin connections below.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+          ${PG_COMPONENTS.map(c => `
+            <div class="hw-chip pg-comp-chip" id="pgc-${c.id}" onclick="toggleHWComponent('${c.id}')" title="${c.pin ? 'Pin '+c.pin : c.pins ? 'Pins '+c.pins.join(',') : ''}">
+              <span class="hw-dot"></span>${c.label}
+            </div>
+          `).join('')}
+        </div>
+        <div id="pg-wiring-diagram" class="pg-wiring-diagram">
+          <div style="color:var(--text3);font-size:.8rem;font-style:italic">Add components above to see wiring.</div>
+        </div>
+        <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+          <p style="color:var(--text3);font-size:.75rem;margin-bottom:6px;font-weight:600">Saved Lesson Code:</p>
+          ${renderSavedCodeSnippets()}
+        </div>
+      </div>
+      <div id="pg-panel-snippets" class="panel-content" style="overflow-y:auto;flex:1;display:none">
         <p style="color:var(--text3);font-size:.85rem;margin-bottom:12px">Click a snippet to load it into the editor:</p>
         ${[
           ['💡 Blink',       'void setup(){pinMode(13,OUTPUT);Serial.begin(9600);}\nvoid loop(){digitalWrite(13,HIGH);Serial.println("ON");delay(500);digitalWrite(13,LOW);Serial.println("OFF");delay(500);}'],
@@ -872,13 +893,11 @@ function renderPlayground() {
           ['⏱️ millis()',    'unsigned long prev=0;\nvoid setup(){Serial.begin(9600);}\nvoid loop(){unsigned long now=millis();if(now-prev>=1000){prev=now;Serial.print("Second: ");Serial.println(now/1000);}}'],
           ['🔘 Button Read', 'void setup(){pinMode(2,INPUT_PULLUP);Serial.begin(9600);}\nvoid loop(){int state=digitalRead(2);Serial.println(state==LOW?"Button PRESSED":"Button released");delay(100);}'],
           ['🔔 Buzzer Tone', 'void setup(){pinMode(8,OUTPUT);}\nvoid loop(){for(int i=0;i<50;i++){digitalWrite(8,HIGH);delay(1);digitalWrite(8,LOW);delay(1);}delay(500);}'],
+          ['🌡️ Thermistor',  'void setup(){Serial.begin(9600);}\nvoid loop(){int raw=analogRead(A0);float R=10000.0*(1023.0/raw-1.0);float T=1.0/(log(R/10000.0)/3950.0+1.0/298.15)-273.15;Serial.print("Temp: ");Serial.print(T,1);Serial.println(" C");delay(1000);}'],
+          ['📏 Ultrasonic',  'const int TRIG=9,ECHO=10;\nvoid setup(){pinMode(TRIG,OUTPUT);pinMode(ECHO,INPUT);Serial.begin(9600);}\nvoid loop(){digitalWrite(TRIG,LOW);delayMicroseconds(2);digitalWrite(TRIG,HIGH);delayMicroseconds(10);digitalWrite(TRIG,LOW);long dur=pulseIn(ECHO,HIGH);float cm=dur/58.0;Serial.print(cm,1);Serial.println(" cm");delay(300);}'],
         ].map(([name, code]) => `
           <div class="snippet-chip" onclick='loadSnippet(${JSON.stringify(code)})'>${name}</div>
         `).join('')}
-        <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
-          <p style="color:var(--text3);font-size:.82rem;margin-bottom:8px;font-weight:600">Your Saved Lesson Code:</p>
-          ${renderSavedCodeSnippets()}
-        </div>
       </div>
     </div>
     <div class="editor-panel">
@@ -886,14 +905,6 @@ function renderPlayground() {
         <span class="toolbar-title">playground.ino&nbsp;<span style="color:var(--text3);font-weight:400;font-size:.72rem">(Ctrl+Enter = Run)</span></span>
         <button class="run-btn" id="run-btn" onclick="toggleRun()">▶ Run</button>
         <button class="reset-code-btn" onclick="resetPlayground()">↺ Clear</button>
-      </div>
-      <div class="hw-toolbar" id="hw-toolbar">
-        <span class="hw-toolbar-label">Hardware Components (click to add to simulator):</span>
-        ${PG_COMPONENTS.map(c => `
-          <div class="hw-chip" id="hw-${c.id}" onclick="toggleHWComponent('${c.id}')" title="Pin ${c.pin || c.pins?.join('/')}">
-            <span class="hw-dot"></span>${c.label}
-          </div>
-        `).join('')}
       </div>
       <div class="editor-cm-wrap" id="editor-wrap"></div>
       <div class="sim-panel">
@@ -928,6 +939,7 @@ function renderPlayground() {
   }
   pgActiveComponents = new Set();
   rebuildPlaygroundBoard();
+  updateWiringDiagram();
 }
 
 function renderSavedCodeSnippets() {
@@ -947,12 +959,110 @@ window.toggleHWComponent = function(id) {
   } else {
     pgActiveComponents.add(id);
   }
-  document.querySelectorAll('.hw-chip').forEach(c => c.classList.remove('active'));
+  // Sync chip active states
+  document.querySelectorAll('.pg-comp-chip').forEach(c => c.classList.remove('active'));
   pgActiveComponents.forEach(cid => {
-    const el = document.getElementById(`hw-${cid}`);
+    const el = document.getElementById(`pgc-${cid}`);
     if (el) el.classList.add('active');
   });
   rebuildPlaygroundBoard();
+  updateWiringDiagram();
+};
+
+// Wiring colour per component type
+const _WIRE_COLORS = { vcc: '#e74c3c', gnd: '#555', signal: '#3fb950', pwm: '#bc8cff', sda: '#f2a900', scl: '#1f6feb' };
+function _wire(label, color, arduino, comp) {
+  return `<div class="wd-row">
+    <span class="wd-pin" style="background:${color}20;color:${color};border-color:${color}40">${arduino}</span>
+    <span class="wd-line" style="background:${color}"></span>
+    <span class="wd-comp">${comp}</span>
+    <span class="wd-label" style="color:${color}">${label}</span>
+  </div>`;
+}
+const _WIRING_INFO = {
+  button:     () => [
+    _wire('VCC', _WIRE_COLORS.vcc,    '5V',    'VCC'),
+    _wire('GND', _WIRE_COLORS.gnd,    'GND',   'GND'),
+    _wire('SIG', _WIRE_COLORS.signal, 'Pin 2', 'OUT'),
+  ],
+  buzzer:     () => [
+    _wire('PWR', _WIRE_COLORS.vcc,    '5V',    '+'),
+    _wire('GND', _WIRE_COLORS.gnd,    'GND',   '−'),
+    _wire('SIG', _WIRE_COLORS.signal, 'Pin 8', 'S'),
+  ],
+  servo:      () => [
+    _wire('PWR', _WIRE_COLORS.vcc,    '5V',    'Red'),
+    _wire('GND', _WIRE_COLORS.gnd,    'GND',   'Brown'),
+    _wire('PWM', _WIRE_COLORS.pwm,    'Pin 9~','Orange'),
+  ],
+  rgb:        () => [
+    _wire('R',   '#e74c3c',           'Pin 9~', 'R → 220Ω'),
+    _wire('G',   '#3fb950',           'Pin 10~','G → 220Ω'),
+    _wire('B',   '#3498db',           'Pin 11~','B → 220Ω'),
+    _wire('GND', _WIRE_COLORS.gnd,    'GND',   'Cathode'),
+  ],
+  ultrasonic: () => [
+    _wire('VCC',  _WIRE_COLORS.vcc,    '5V',    'VCC'),
+    _wire('GND',  _WIRE_COLORS.gnd,    'GND',   'GND'),
+    _wire('TRIG', _WIRE_COLORS.signal, 'Pin 9', 'TRIG'),
+    _wire('ECHO', _WIRE_COLORS.pwm,    'Pin 10','ECHO'),
+  ],
+  motor:      () => [
+    _wire('ENA', _WIRE_COLORS.pwm,    'Pin 9~', 'ENA (speed)'),
+    _wire('IN1', _WIRE_COLORS.signal, 'Pin 7',  'IN1'),
+    _wire('IN2', _WIRE_COLORS.signal, 'Pin 8',  'IN2'),
+    _wire('VCC', _WIRE_COLORS.vcc,    'Vin/12V','12V Motor'),
+    _wire('GND', _WIRE_COLORS.gnd,    'GND',    'GND'),
+  ],
+  stepper:    () => [
+    _wire('IN1', _WIRE_COLORS.signal, 'Pin 8',  'IN1'),
+    _wire('IN2', _WIRE_COLORS.signal, 'Pin 9',  'IN2'),
+    _wire('IN3', _WIRE_COLORS.signal, 'Pin 10', 'IN3'),
+    _wire('IN4', _WIRE_COLORS.signal, 'Pin 11', 'IN4'),
+    _wire('VCC', _WIRE_COLORS.vcc,    '5V',     'VCC (ULN2003)'),
+    _wire('GND', _WIRE_COLORS.gnd,    'GND',    'GND'),
+  ],
+  imu:        () => [
+    _wire('VCC', _WIRE_COLORS.vcc,    '3.3V',  'VCC'),
+    _wire('GND', _WIRE_COLORS.gnd,    'GND',   'GND'),
+    _wire('SDA', _WIRE_COLORS.sda,    'A4',    'SDA'),
+    _wire('SCL', _WIRE_COLORS.scl,    'A5',    'SCL'),
+  ],
+  lcd:        () => [
+    _wire('VCC', _WIRE_COLORS.vcc,    '5V',    'VCC'),
+    _wire('GND', _WIRE_COLORS.gnd,    'GND',   'GND'),
+    _wire('SDA', _WIRE_COLORS.sda,    'A4',    'SDA'),
+    _wire('SCL', _WIRE_COLORS.scl,    'A5',    'SCL'),
+  ],
+};
+
+function updateWiringDiagram() {
+  const el = document.getElementById('pg-wiring-diagram');
+  if (!el) return;
+  if (pgActiveComponents.size === 0) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:.8rem;font-style:italic">Add components above to see wiring.</div>';
+    return;
+  }
+  let html = `<div class="wd-header">
+    <span class="wd-col">Arduino</span>
+    <span></span>
+    <span class="wd-col">Component</span>
+    <span class="wd-col">Pin</span>
+  </div>`;
+  pgActiveComponents.forEach(cid => {
+    const def = PG_COMPONENTS.find(c => c.id === cid);
+    const rows = _WIRING_INFO[cid] ? _WIRING_INFO[cid]() : [];
+    if (!rows.length) return;
+    html += `<div class="wd-section-label">${def.label}</div>` + rows.join('');
+  });
+  el.innerHTML = html;
+}
+
+window.pgSwitchTab = function(tab) {
+  document.getElementById('pg-tab-wire').classList.toggle('active', tab === 'wire');
+  document.getElementById('pg-tab-snippets').classList.toggle('active', tab === 'snippets');
+  document.getElementById('pg-panel-wire').style.display = tab === 'wire' ? '' : 'none';
+  document.getElementById('pg-panel-snippets').style.display = tab === 'snippets' ? '' : 'none';
 };
 
 function rebuildPlaygroundBoard() {

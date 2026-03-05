@@ -19,24 +19,45 @@ const LEVELS = [
 
 // ── Achievements ──────────────────────────────────────────
 const ACHIEVEMENTS = [
-  { id: 'first_lesson',    icon: '🚀', name: 'First Steps',       desc: 'Complete your very first lesson.',                    cond: s => s.completedLessons.length >= 1   },
-  { id: 'blink_master',    icon: '💡', name: 'Blink Master',      desc: 'Complete the Blink lesson.',                          cond: s => s.completedLessons.includes('blink')  },
-  { id: 'quiz_ace',        icon: '🎯', name: 'Quiz Ace',          desc: 'Answer a quiz question correctly.',                   cond: s => Object.values(s.quizScores).some(v => v >= 100)  },
-  { id: 'five_lessons',    icon: '🔥', name: 'On Fire',           desc: 'Complete 5 lessons.',                                 cond: s => s.completedLessons.length >= 5   },
-  { id: 'ten_lessons',     icon: '🎖️', name: 'Committed',        desc: 'Complete 10 lessons.',                                cond: s => s.completedLessons.length >= 10  },
-  { id: 'halfway',         icon: '🏅', name: 'Halfway There',     desc: 'Complete 24 lessons (half the course).',              cond: s => s.completedLessons.length >= 24  },
-  { id: 'all_lessons',     icon: '🎓', name: 'Graduate',          desc: 'Complete all 48 lessons.',                            cond: s => s.completedLessons.length >= 48  },
-  { id: 'hardware_fan',    icon: '🔌', name: 'Hardware Fan',      desc: 'Complete 5 real-hardware lessons.',                   cond: s => ['ultrasonic_sensor','dc_motor_hbridge','stepper_motor','imu_sensor','ir_remote','servo_potentiometer','rotary_encoder','ir_sensor','pir_motion','microphone_sensor','joystick','lcd_i2c','continuous_servo','dht11_sensor','relay_module','shift_register','keypad_matrix'].filter(id => s.completedLessons.includes(id)).length >= 5  },
-  { id: 'hardware_master', icon: '🤖', name: 'Hardware Master',   desc: 'Complete all 17 real-hardware lessons.',              cond: s => ['ultrasonic_sensor','dc_motor_hbridge','stepper_motor','imu_sensor','ir_remote','servo_potentiometer','rotary_encoder','ir_sensor','pir_motion','microphone_sensor','joystick','lcd_i2c','continuous_servo','dht11_sensor','relay_module','shift_register','keypad_matrix'].every(id => s.completedLessons.includes(id))  },
-  { id: 'serial_user',     icon: '📡', name: 'Talker',            desc: 'Use Serial.println() in your code.',                  cond: s => s.serialUsed  },
-  { id: 'pwm_user',        icon: '🌈', name: 'Fader',             desc: 'Use analogWrite() for PWM.',                          cond: s => s.pwmUsed     },
-  { id: 'first_challenge', icon: '💪', name: 'Challenger',        desc: 'Pass your first challenge.',                          cond: s => s.challengesPassed >= 1  },
-  { id: 'five_challenges', icon: '🏋️', name: 'Iron Coder',       desc: 'Pass 5 challenges.',                                  cond: s => s.challengesPassed >= 5  },
-  { id: 'ten_challenges',  icon: '🦾', name: 'Challenge Beast',   desc: 'Pass 10 challenges.',                                 cond: s => s.challengesPassed >= 10 },
-  { id: 'first_try',       icon: '⚡', name: 'First Try!',        desc: 'Pass a challenge on the first attempt.',              cond: s => s.firstTryPasses >= 1    },
-  { id: 'xp_500',          icon: '⭐', name: 'XP Grinder',        desc: 'Earn 500 total XP.',                                  cond: s => s.xp >= 500   },
-  { id: 'xp_1000',         icon: '🌟', name: 'XP Master',         desc: 'Earn 1000 total XP.',                                 cond: s => s.xp >= 1000  },
-  { id: 'xp_2000',         icon: '💎', name: 'XP Legend',         desc: 'Earn 2000 total XP.',                                 cond: s => s.xp >= 2000  },
+  // ── Lesson milestones
+  { id: 'first_lesson',     icon: '🚀', name: 'First Steps',       desc: 'Complete your very first lesson.',              cond: s => s.completedLessons.length >= 1   },
+  { id: 'five_lessons',     icon: '🔥', name: 'On Fire',           desc: 'Complete 5 lessons.',                           cond: s => s.completedLessons.length >= 5   },
+  { id: 'ten_lessons',      icon: '🎖️', name: 'Committed',        desc: 'Complete 10 lessons.',                          cond: s => s.completedLessons.length >= 10  },
+  { id: 'twenty_lessons',   icon: '🌠', name: 'Rising Star',       desc: 'Complete 20 lessons.',                          cond: s => s.completedLessons.length >= 20  },
+  { id: 'halfway',          icon: '🏅', name: 'Halfway There',     desc: 'Complete 32 lessons — halfway!',                cond: s => s.completedLessons.length >= 32  },
+  { id: 'forty_lessons',    icon: '🔮', name: 'Deep Learner',      desc: 'Complete 40 lessons.',                          cond: s => s.completedLessons.length >= 40  },
+  { id: 'fifty_lessons',    icon: '🎪', name: 'Half a Century',    desc: 'Complete 50 lessons.',                          cond: s => s.completedLessons.length >= 50  },
+  { id: 'all_lessons',      icon: '🎓', name: 'Graduate',          desc: 'Complete all 63 lessons — true master!',        cond: s => s.completedLessons.length >= 63  },
+  // ── Specific lessons
+  { id: 'blink_master',     icon: '💡', name: 'Blink Master',      desc: 'Complete the Blink lesson.',                    cond: s => s.completedLessons.includes('blink') },
+  { id: 'robot_builder',    icon: '🚗', name: 'Robot Builder',     desc: 'Complete the Line Following lesson.',           cond: s => s.completedLessons.includes('ir_obstacle_line') },
+  { id: 'wireless_hacker',  icon: '📶', name: 'Wireless Hacker',   desc: 'Complete the Bluetooth lesson.',                cond: s => s.completedLessons.includes('hc05_bluetooth')  },
+  { id: 'data_scientist',   icon: '💾', name: 'Data Scientist',    desc: 'Complete the SD Card Data Logger lesson.',      cond: s => s.completedLessons.includes('sd_card')         },
+  { id: 'rgb_wizard',       icon: '🌈', name: 'RGB Wizard',        desc: 'Complete the NeoPixel LED Strip lesson.',       cond: s => s.completedLessons.includes('neopixel')        },
+  { id: 'security_expert',  icon: '🔐', name: 'Security Expert',   desc: 'Complete the RFID Reader lesson.',              cond: s => s.completedLessons.includes('rfid_mfrc522')    },
+  { id: 'green_thumb',      icon: '🌱', name: 'Green Thumb',       desc: 'Complete the Soil Moisture Sensor lesson.',     cond: s => s.completedLessons.includes('soil_moisture')   },
+  // ── Hardware milestones
+  { id: 'hardware_debut',   icon: '🔩', name: 'Hardware Debut',    desc: 'Complete your first hardware lesson.',          cond: s => ['ultrasonic_sensor','dc_motor_hbridge','stepper_motor','imu_sensor','ir_remote','servo_potentiometer','rotary_encoder','ir_sensor','pir_motion','microphone_sensor','joystick','lcd_i2c','continuous_servo','dht11_sensor','relay_module','shift_register','keypad_matrix','oled_display','neopixel','tm1637_display','hc05_bluetooth','rfid_mfrc522','soil_moisture','gas_sensor_mq2','thermistor','flame_sensor','rain_sensor','touch_sensor_ttp','tilt_switch','hall_effect','sd_card','ir_obstacle_line'].some(id => s.completedLessons.includes(id)) },
+  { id: 'hardware_fan',     icon: '🔌', name: 'Hardware Fan',      desc: 'Complete 10 hardware lessons.',                 cond: s => ['ultrasonic_sensor','dc_motor_hbridge','stepper_motor','imu_sensor','ir_remote','servo_potentiometer','rotary_encoder','ir_sensor','pir_motion','microphone_sensor','joystick','lcd_i2c','continuous_servo','dht11_sensor','relay_module','shift_register','keypad_matrix','oled_display','neopixel','tm1637_display','hc05_bluetooth','rfid_mfrc522','soil_moisture','gas_sensor_mq2','thermistor','flame_sensor','rain_sensor','touch_sensor_ttp','tilt_switch','hall_effect','sd_card','ir_obstacle_line'].filter(id => s.completedLessons.includes(id)).length >= 10 },
+  { id: 'hardware_master',  icon: '🤖', name: 'Hardware Master',   desc: 'Complete 25 hardware lessons.',                 cond: s => ['ultrasonic_sensor','dc_motor_hbridge','stepper_motor','imu_sensor','ir_remote','servo_potentiometer','rotary_encoder','ir_sensor','pir_motion','microphone_sensor','joystick','lcd_i2c','continuous_servo','dht11_sensor','relay_module','shift_register','keypad_matrix','oled_display','neopixel','tm1637_display','hc05_bluetooth','rfid_mfrc522','soil_moisture','gas_sensor_mq2','thermistor','flame_sensor','rain_sensor','touch_sensor_ttp','tilt_switch','hall_effect','sd_card','ir_obstacle_line'].filter(id => s.completedLessons.includes(id)).length >= 25 },
+  // ── Quizzes & challenges
+  { id: 'quiz_ace',         icon: '🎯', name: 'Quiz Ace',          desc: 'Score 100% on a quiz.',                         cond: s => Object.values(s.quizScores).some(v => v >= 100) },
+  { id: 'quiz_streak',      icon: '🧠', name: 'Big Brain',         desc: 'Score 100% on 5 different quizzes.',            cond: s => Object.values(s.quizScores).filter(v => v >= 100).length >= 5 },
+  { id: 'first_challenge',  icon: '💪', name: 'Challenger',        desc: 'Pass your first challenge.',                    cond: s => s.challengesPassed >= 1  },
+  { id: 'five_challenges',  icon: '🏋️', name: 'Iron Coder',       desc: 'Pass 5 challenges.',                            cond: s => s.challengesPassed >= 5  },
+  { id: 'ten_challenges',   icon: '🦾', name: 'Challenge Beast',   desc: 'Pass 10 challenges.',                           cond: s => s.challengesPassed >= 10 },
+  { id: 'twenty_challenges',icon: '👑', name: 'Challenge King',    desc: 'Pass 20 challenges.',                           cond: s => s.challengesPassed >= 20 },
+  { id: 'first_try',        icon: '⚡', name: 'First Try!',        desc: 'Pass a challenge on the first attempt.',        cond: s => s.firstTryPasses >= 1    },
+  { id: 'three_first_try',  icon: '⚡⚡','name': 'Sharp Mind',     desc: 'Pass 3 challenges on the first attempt.',       cond: s => s.firstTryPasses >= 3    },
+  // ── Coding skills
+  { id: 'serial_user',      icon: '📡', name: 'Talker',            desc: 'Use Serial.println() in your code.',            cond: s => s.serialUsed },
+  { id: 'pwm_user',         icon: '🌈', name: 'Fader',             desc: 'Use analogWrite() for PWM.',                    cond: s => s.pwmUsed    },
+  // ── XP milestones
+  { id: 'xp_100',           icon: '✨', name: 'Getting Started',   desc: 'Earn 100 XP.',                                  cond: s => s.xp >= 100   },
+  { id: 'xp_500',           icon: '⭐', name: 'XP Grinder',        desc: 'Earn 500 XP.',                                  cond: s => s.xp >= 500   },
+  { id: 'xp_1000',          icon: '🌟', name: 'XP Master',         desc: 'Earn 1000 XP.',                                 cond: s => s.xp >= 1000  },
+  { id: 'xp_2000',          icon: '💎', name: 'XP Legend',         desc: 'Earn 2000 XP.',                                 cond: s => s.xp >= 2000  },
+  { id: 'xp_3500',          icon: '🏆', name: 'XP Champion',       desc: 'Earn 3500 XP — full course completed!',         cond: s => s.xp >= 3500  },
 ];
 
 // ── Lessons ───────────────────────────────────────────────
@@ -4550,6 +4571,1405 @@ void loop() {
         hint: 'analogWrite(9, brightness);  Then optionally add: Serial.println(brightness); to see the wave in Serial Monitor!',
       },
     ],
+  },
+
+  // ── NEW COMPONENT LESSONS ────────────────────────────────
+
+  {
+    id: 'oled_display',
+    icon: '🖥️',
+    title: 'OLED Display (SSD1306)',
+    difficulty: 'intermediate',
+    xp: 75,
+    desc: 'Drive a 128×64 OLED screen over I2C using the Adafruit SSD1306 library. Display text, numbers, and graphics.',
+    parts: ['Arduino Uno', 'SSD1306 OLED 128×64 (I2C)', 'Jumper wires'],
+    skills: ['Adafruit_SSD1306', 'I2C', 'display.print()', 'clearDisplay()'],
+    components: [{ type: 'lcd' }],
+    wiring: [
+      'OLED VCC → 3.3V (some modules accept 5V — check yours)',
+      'OLED GND → GND',
+      'OLED SDA → A4',
+      'OLED SCL → A5',
+    ],
+    theory: `
+## OLED Display (SSD1306)
+
+OLED (Organic Light-Emitting Diode) screens are popular because they are **thin, bright, and need no backlight**. The SSD1306 is a 128×64 pixel monochrome display that talks to the Arduino over **I2C**.
+
+### Library Setup
+
+Install the **Adafruit SSD1306** and **Adafruit GFX** libraries from the Library Manager.
+
+\`\`\`cpp
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+\`\`\`
+
+### Key Functions
+
+| Function | Effect |
+|----------|--------|
+| \`display.begin(SSD1306_SWITCHCAPVCC, 0x3C)\` | Init at I2C address 0x3C |
+| \`display.clearDisplay()\` | Clear the buffer |
+| \`display.setTextSize(1)\` | Text scale 1–4 |
+| \`display.setCursor(x, y)\` | Move text cursor |
+| \`display.print("Hello")\` | Write text |
+| \`display.display()\` | Push buffer to screen |
+
+### Simulator
+The simulator shows an LCD panel — text printed via the library appears on the LCD widget.
+    `,
+    starterCode: `// OLED Display — SSD1306 over I2C
+// Simulator: LCD widget shows output text
+// Real HW: add #include <Adafruit_GFX.h> etc.
+
+// Simulator uses createLCD() stub
+// On real hardware use the Adafruit libraries
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("OLED ready!");
+  Serial.println("Simulating with LCD...");
+}
+
+int counter = 0;
+
+void loop() {
+  counter++;
+  Serial.print("Count: ");
+  Serial.println(counter);
+  delay(1000);
+}
+`,
+    challenge: 'Make the display show a countdown from 10 to 0, then print "GO!" — use Serial to simulate output. Bonus: add a blinking effect by alternating between printing and clearing.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        /\d/.test(l) || l.toLowerCase().includes('go') || l.toLowerCase().includes('count'));
+    },
+  },
+
+  {
+    id: 'neopixel',
+    icon: '🌈',
+    title: 'NeoPixel / WS2812B LED Strip',
+    difficulty: 'intermediate',
+    xp: 70,
+    desc: 'Control individually addressable RGB LEDs (NeoPixels / WS2812B) using the FastLED or Adafruit NeoPixel library.',
+    parts: ['Arduino Uno', 'WS2812B LED strip or ring', '470Ω resistor (data line)', '1000µF capacitor (power)', 'External 5V supply for large strips'],
+    skills: ['FastLED', 'CRGB', 'fill_solid()', 'fill_rainbow()', 'show()'],
+    components: [{ type: 'rgb', r: 9, g: 10, b: 11 }],
+    wiring: [
+      'LED Strip 5V → External 5V (NOT Arduino 5V for >8 LEDs)',
+      'LED Strip GND → GND (shared with Arduino)',
+      'LED Strip DATA IN → 470Ω resistor → Pin 6',
+    ],
+    theory: `
+## NeoPixel / WS2812B LEDs
+
+WS2812B LEDs (sold as NeoPixels) are individually addressable RGB LEDs — each pixel in the strip can be any colour, controlled with a **single data wire**.
+
+### Protocol
+
+Each LED receives 24 bits (8R + 8G + 8B). You send all LED data in a chain at 800 kHz. Timing is very precise — use a library, never bit-bang by hand.
+
+### FastLED Library (Recommended)
+
+\`\`\`cpp
+#include <FastLED.h>
+#define NUM_LEDS 8
+#define DATA_PIN 6
+CRGB leds[NUM_LEDS];
+
+void setup() {
+  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
+  FastLED.setBrightness(50);
+}
+\`\`\`
+
+### Colour Functions
+
+| Function | Effect |
+|----------|--------|
+| \`leds[i] = CRGB::Red\` | Set pixel i to red |
+| \`leds[i] = CRGB(255,0,128)\` | Custom RGB colour |
+| \`fill_rainbow(leds, NUM_LEDS, hue, 7)\` | Rainbow pattern |
+| \`fill_solid(leds, NUM_LEDS, CRGB::Blue)\` | Solid colour |
+| \`FastLED.show()\` | Push data to strip |
+
+> **Power:** Each LED draws up to 60 mA at full white. A strip of 8 = 480 mA. Use an external 5V supply for strips longer than 8 LEDs.
+
+### Simulator
+The RGB LED widget demonstrates colour changes. Pin 9 = Red, Pin 10 = Green, Pin 11 = Blue.
+    `,
+    starterCode: `// NeoPixel / WS2812B LED Strip
+// Simulator: RGB LED widget on pins 9/10/11
+// Real HW: use FastLED or Adafruit NeoPixel library on Pin 6
+
+const int RED_PIN   = 9;
+const int GREEN_PIN = 10;
+const int BLUE_PIN  = 11;
+
+void setColor(int r, int g, int b) {
+  analogWrite(RED_PIN,   r);
+  analogWrite(GREEN_PIN, g);
+  analogWrite(BLUE_PIN,  b);
+}
+
+void setup() {
+  pinMode(RED_PIN,   OUTPUT);
+  pinMode(GREEN_PIN, OUTPUT);
+  pinMode(BLUE_PIN,  OUTPUT);
+  Serial.begin(9600);
+  Serial.println("NeoPixel simulator running!");
+}
+
+void loop() {
+  Serial.println("RED");
+  setColor(255, 0, 0);  delay(600);
+  Serial.println("GREEN");
+  setColor(0, 255, 0);  delay(600);
+  Serial.println("BLUE");
+  setColor(0, 0, 255);  delay(600);
+  Serial.println("WHITE");
+  setColor(200, 200, 200); delay(600);
+  Serial.println("OFF");
+  setColor(0, 0, 0);    delay(300);
+}
+`,
+    challenge: 'Create a "police light" effect: flash red 3 times quickly, then blue 3 times quickly, repeat. Use analogWrite for each colour channel.',
+    validate(state) {
+      return state.pwmUsed && state.serialUsed;
+    },
+  },
+
+  {
+    id: 'tm1637_display',
+    icon: '🔢',
+    title: '4-Digit 7-Segment Display (TM1637)',
+    difficulty: 'beginner',
+    xp: 55,
+    desc: 'Show numbers on a classic 4-digit 7-segment display using the TM1637 library. Perfect for clocks, counters, and scoreboards.',
+    parts: ['Arduino Uno', 'TM1637 4-digit display', 'Jumper wires'],
+    skills: ['TM1637Display', 'showNumberDec()', 'showNumberDecEx()', 'setBrightness()'],
+    components: [],
+    wiring: [
+      'TM1637 VCC → 5V',
+      'TM1637 GND → GND',
+      'TM1637 CLK → Pin 2',
+      'TM1637 DIO → Pin 3',
+    ],
+    theory: `
+## TM1637 4-Digit Display
+
+The TM1637 drives four 7-segment digits using only **2 wires** (CLK + DIO — not standard I2C). Install the **TM1637** library by Avishay Orpaz.
+
+### Setup
+
+\`\`\`cpp
+#include <TM1637Display.h>
+#define CLK 2
+#define DIO 3
+TM1637Display display(CLK, DIO);
+\`\`\`
+
+### Key Functions
+
+| Function | Description |
+|----------|-------------|
+| \`display.setBrightness(7)\` | Brightness 0–7 |
+| \`display.showNumberDec(1234)\` | Show integer |
+| \`display.showNumberDecEx(1234, 0b01000000, true)\` | Show 12:34 with colon |
+| \`display.clear()\` | Blank the display |
+
+### Digit Colon
+
+The colon (:) between digit 1 and 2 is controlled by the second argument of \`showNumberDecEx()\`. Use \`0b01000000\` to light it up.
+
+### Simulator Note
+Since the simulator has no TM1637 widget, output is shown via Serial Monitor. On real hardware the digits appear on the physical display.
+    `,
+    starterCode: `// TM1637 4-Digit Display
+// Real HW: TM1637Display library, CLK→Pin2 DIO→Pin3
+// Simulator: output shown in Serial Monitor
+
+// Simulating with Serial output
+void setup() {
+  Serial.begin(9600);
+  Serial.println("TM1637 Display Simulator");
+  Serial.println("========================");
+}
+
+int seconds = 0;
+
+void loop() {
+  int minutes = seconds / 60;
+  int secs    = seconds % 60;
+
+  // Print as clock format MM:SS
+  char buf[10];
+  sprintf(buf, "%02d:%02d", minutes, secs);
+  Serial.println(buf);
+
+  seconds++;
+  if (seconds >= 6000) seconds = 0;
+  delay(1000);
+}
+`,
+    challenge: 'Make a stopwatch that counts up every second and resets to 00:00 after 59:59. Print each second in MM:SS format to Serial. Hint: use millis() instead of delay() for accuracy.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l => /\d\d:\d\d/.test(l));
+    },
+  },
+
+  {
+    id: 'hc05_bluetooth',
+    icon: '📶',
+    title: 'HC-05 Bluetooth Module',
+    difficulty: 'intermediate',
+    xp: 70,
+    desc: 'Add wireless Bluetooth serial communication to your Arduino using the HC-05 module. Send and receive data from a phone or PC.',
+    parts: ['Arduino Uno', 'HC-05 Bluetooth module', 'Voltage divider (1kΩ + 2kΩ) for RX line', 'Breadboard', 'Jumper wires'],
+    skills: ['SoftwareSerial', 'Serial.available()', 'bluetooth.read()', 'AT commands'],
+    components: [],
+    wiring: [
+      'HC-05 VCC → 5V',
+      'HC-05 GND → GND',
+      'HC-05 TXD → Arduino Pin 10 (RX)',
+      'HC-05 RXD → Voltage divider → Arduino Pin 11 (TX)',
+      'Voltage divider: Pin11 → 1kΩ → HC-05 RXD → 2kΩ → GND',
+    ],
+    theory: `
+## HC-05 Bluetooth Module
+
+The HC-05 is a classic Bluetooth 2.0 module that creates a wireless **serial bridge**. Your phone or PC connects to it, and any data sent appears on the Arduino's serial port — and vice versa.
+
+### SoftwareSerial
+
+Since we use hardware Serial for debugging, we use SoftwareSerial on two other pins for Bluetooth:
+
+\`\`\`cpp
+#include <SoftwareSerial.h>
+SoftwareSerial bluetooth(10, 11); // RX, TX
+\`\`\`
+
+### Default Settings (HC-05)
+
+| Setting | Value |
+|---------|-------|
+| Baud rate | 9600 |
+| Pairing code | 1234 or 0000 |
+| Device name | HC-05 |
+
+### Voltage Divider (Important!)
+
+The HC-05 RX pin is **3.3V logic**. The 1kΩ/2kΩ divider brings 5V from Arduino TX down to 3.3V. Without it, you risk damaging the module.
+
+### AT Commands
+Put HC-05 in AT mode (hold button while powering on) to configure it:
+- \`AT\` → OK
+- \`AT+NAME=MyArduino\` → change name
+- \`AT+BAUD4\` → set 9600 baud
+
+### Simulator Note
+Simulated with hardware Serial. On real hardware, replace \`Serial\` with your \`bluetooth\` SoftwareSerial object.
+    `,
+    starterCode: `// HC-05 Bluetooth — simulated with Serial Monitor
+// Real HW: #include <SoftwareSerial.h>
+//          SoftwareSerial bluetooth(10,11);
+//          bluetooth.begin(9600);
+//          Replace Serial.read() with bluetooth.read() etc.
+
+char receivedChar = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(13, OUTPUT);
+  Serial.println("Bluetooth ready. Send 'H' to turn LED on, 'L' to turn off.");
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    receivedChar = Serial.read();
+    Serial.print("Received: ");
+    Serial.println(receivedChar);
+
+    if (receivedChar == 'H') {
+      digitalWrite(13, HIGH);
+      Serial.println("LED ON");
+    } else if (receivedChar == 'L') {
+      digitalWrite(13, LOW);
+      Serial.println("LED OFF");
+    }
+  }
+}
+`,
+    challenge: 'Extend the sketch to respond to commands: \'1\'–\'9\' set the LED blink speed (1=slow, 9=fast), \'S\' stops blinking, \'R\' reports the current speed back via Serial.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('Bluetooth') || l.includes('LED') || l.includes('Received'));
+    },
+  },
+
+  {
+    id: 'rfid_mfrc522',
+    icon: '📡',
+    title: 'RFID Reader (MFRC522)',
+    difficulty: 'intermediate',
+    xp: 75,
+    desc: 'Read RFID/NFC cards and tags using the MFRC522 module and SPI bus. Build access control systems and card-triggered actions.',
+    parts: ['Arduino Uno', 'MFRC522 RFID module', 'RFID card or key fob', 'Jumper wires'],
+    skills: ['MFRC522 library', 'SPI', 'PICC_ReadCardSerial()', 'UID parsing'],
+    components: [],
+    wiring: [
+      'MFRC522 VCC → 3.3V (NOT 5V — will damage module!)',
+      'MFRC522 GND → GND',
+      'MFRC522 SDA (SS) → Pin 10',
+      'MFRC522 SCK → Pin 13',
+      'MFRC522 MOSI → Pin 11',
+      'MFRC522 MISO → Pin 12',
+      'MFRC522 RST → Pin 9',
+    ],
+    theory: `
+## MFRC522 RFID Reader
+
+The MFRC522 reads **13.56 MHz** RFID cards (like school/office keycards). It communicates over **SPI**. Install the **MFRC522** library by miguelbalboa.
+
+### SPI Pins (Arduino Uno)
+
+| Signal | Arduino Pin |
+|--------|-------------|
+| SCK | 13 |
+| MOSI | 11 |
+| MISO | 12 |
+| SS (SDA) | 10 |
+| RST | 9 |
+
+> ⚠️ The MFRC522 runs at **3.3V**. Connecting VCC to 5V will destroy the module!
+
+### How It Works
+
+The module constantly sends out a 13.56 MHz radio field. When an RFID card enters range (~5 cm), it powers up and sends back its unique **UID** (4 or 7 bytes).
+
+\`\`\`cpp
+#include <SPI.h>
+#include <MFRC522.h>
+MFRC522 rfid(10, 9);  // SS, RST
+
+if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+  // rfid.uid.uidByte[0..3] = card UID
+}
+\`\`\`
+
+### Access Control Pattern
+Store allowed UIDs in an array. Compare scanned UID to array. Grant/deny access.
+
+### Simulator Note
+Simulated with button press on Pin 2 = "card present". Prints a fake UID to Serial.
+    `,
+    starterCode: `// RFID Reader — MFRC522
+// Simulator: press button (Pin 2) to simulate card scan
+// Real HW: #include <SPI.h> / <MFRC522.h>
+
+const int CARD_BTN = 2;
+const int GREEN_LED = 13;
+const int RED_LED   = 12;
+
+// Authorized UID (8-char hex string)
+const String AUTH_UID = "A1B2C3D4";
+int scanCount = 0;
+
+void setup() {
+  pinMode(CARD_BTN, INPUT_PULLUP);
+  pinMode(GREEN_LED, OUTPUT);
+  pinMode(RED_LED, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("RFID Reader Ready — press button to scan");
+}
+
+void loop() {
+  if (digitalRead(CARD_BTN) == LOW) {
+    scanCount++;
+    // Simulate alternating cards: odd = authorized, even = unauthorized
+    String uid = (scanCount % 2 == 1) ? AUTH_UID : "DEADBEEF";
+    Serial.print("Card UID: ");
+    Serial.println(uid);
+
+    if (uid == AUTH_UID) {
+      Serial.println(">>> ACCESS GRANTED <<<");
+      digitalWrite(GREEN_LED, HIGH);
+      delay(1000);
+      digitalWrite(GREEN_LED, LOW);
+    } else {
+      Serial.println("!!! ACCESS DENIED !!!");
+      digitalWrite(RED_LED, HIGH);
+      delay(500);
+      digitalWrite(RED_LED, LOW);
+    }
+    delay(600);
+  }
+}
+`,
+    challenge: 'Add a 3-strike lockout: after 3 denied scans in a row, lock the system for 10 seconds (use millis()). Print "LOCKED for Xs" every second during lockout. Reset strike count on a successful scan.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('ACCESS') || l.includes('UID') || l.includes('LOCKED'));
+    },
+  },
+
+  {
+    id: 'soil_moisture',
+    icon: '🌱',
+    title: 'Soil Moisture Sensor',
+    difficulty: 'beginner',
+    xp: 45,
+    desc: 'Measure soil moisture with a capacitive or resistive sensor and trigger a pump relay when the soil gets too dry.',
+    parts: ['Arduino Uno', 'Capacitive soil moisture sensor (or resistive)', 'Jumper wires'],
+    skills: ['analogRead()', 'map()', 'if/else', 'percentage calculation'],
+    components: [],
+    wiring: [
+      'Sensor VCC → 3.3V or 5V (check your module)',
+      'Sensor GND → GND',
+      'Sensor AOUT → A0',
+    ],
+    theory: `
+## Soil Moisture Sensor
+
+There are two types:
+
+**Resistive sensors** — two probes measure resistance between them. More moisture = lower resistance = lower analog reading. These corrode over time.
+
+**Capacitive sensors** (recommended) — measure capacitance change. More moisture = lower reading. Durable, no corrosion.
+
+### Reading the Sensor
+
+\`\`\`cpp
+int raw = analogRead(A0);  // 0–1023
+// Calibrate: dry air ≈ 600, in water ≈ 300 (capacitive)
+int pct = map(raw, 600, 300, 0, 100);
+pct = constrain(pct, 0, 100);
+\`\`\`
+
+### Thresholds
+
+| Level | Percent |
+|-------|---------|
+| Very Dry | < 20% |
+| Dry | 20–40% |
+| Moist | 40–70% |
+| Wet | > 70% |
+
+> **Calibration:** Take a reading with the sensor in dry air (max dry) and submerged in water (max wet). Use those values in \`map()\`.
+
+### Simulator
+Drag the A0 slider to simulate different moisture levels. Left = dry (high raw value), right = wet (low raw value).
+    `,
+    starterCode: `// Soil Moisture Sensor
+// Simulator: drag A0 slider (left=dry, right=wet)
+// Capacitive: dry≈600, wet≈300 (adjust for your sensor)
+
+const int SENSOR_PIN = A0;
+const int DRY_VAL   = 600;  // raw reading in dry air
+const int WET_VAL   = 300;  // raw reading in water
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Soil Moisture Monitor");
+  Serial.println("Drag A0 slider to simulate moisture level");
+}
+
+void loop() {
+  int raw = analogRead(SENSOR_PIN);
+  int pct = map(raw, DRY_VAL, WET_VAL, 0, 100);
+  pct = constrain(pct, 0, 100);
+
+  Serial.print("Raw: ");
+  Serial.print(raw);
+  Serial.print("  |  Moisture: ");
+  Serial.print(pct);
+  Serial.print("%  |  Status: ");
+
+  if (pct < 20)       Serial.println("VERY DRY - Water needed!");
+  else if (pct < 40)  Serial.println("Dry");
+  else if (pct < 70)  Serial.println("Moist");
+  else                Serial.println("Wet");
+
+  delay(800);
+}
+`,
+    challenge: 'Add automatic pump control: when moisture drops below 30%, print "PUMP ON" for 5 seconds then "PUMP OFF". Use millis() so reading continues while pump runs. Make it check moisture again after pumping and print whether it is still dry.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('Moisture') || l.includes('Dry') || l.includes('Moist'));
+    },
+  },
+
+  {
+    id: 'gas_sensor_mq2',
+    icon: '💨',
+    title: 'Gas / Smoke Sensor (MQ-2)',
+    difficulty: 'intermediate',
+    xp: 60,
+    desc: 'Detect smoke, LPG, methane, and other gases using the MQ-2 sensor. Build a gas alarm with LED and buzzer alerts.',
+    parts: ['Arduino Uno', 'MQ-2 gas sensor module', '1x red LED', '220Ω resistor', 'Buzzer (optional)'],
+    skills: ['analogRead()', 'thresholding', 'calibration', 'alarm logic'],
+    components: [],
+    wiring: [
+      'MQ-2 VCC → 5V',
+      'MQ-2 GND → GND',
+      'MQ-2 AOUT → A0  (analog output)',
+      'MQ-2 DOUT → Pin 7 (digital threshold output)',
+      'LED → 220Ω → Pin 13',
+    ],
+    theory: `
+## MQ-2 Gas Sensor
+
+The MQ-2 detects: LPG, propane, methane, alcohol, hydrogen, smoke. It has a **heating element** that must warm up for 1–2 minutes before readings are stable.
+
+### Outputs
+
+- **AOUT** (Analog) — 0–5V proportional to gas concentration
+- **DOUT** (Digital) — HIGH or LOW based on onboard potentiometer threshold
+
+### Reading Values
+
+\`\`\`cpp
+int gasLevel = analogRead(A0);  // 0–1023
+// Higher value = more gas detected
+// Clean air ≈ 150–300, alarm threshold ≈ 400+
+\`\`\`
+
+### Warm-Up
+
+\`\`\`cpp
+void setup() {
+  Serial.println("Warming up sensor... wait 2 min");
+  delay(120000);  // 2 minutes warm-up
+}
+\`\`\`
+
+### Sensor Response
+
+| Gas Level (raw) | Status |
+|-----------------|--------|
+| < 300 | Clean air |
+| 300–400 | Low detection |
+| 400–700 | Warning |
+| > 700 | DANGER — evacuate! |
+
+### Simulator
+Drag the A0 slider to simulate different gas concentrations.
+    `,
+    starterCode: `// MQ-2 Gas/Smoke Sensor
+// Simulator: drag A0 slider (right = more gas detected)
+// Wait 2 min on real hardware before trusting readings!
+
+const int GAS_PIN    = A0;
+const int ALERT_LED  = 13;
+const int WARN_THRESH  = 400;
+const int ALARM_THRESH = 600;
+
+void setup() {
+  pinMode(ALERT_LED, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("MQ-2 Gas Sensor Ready");
+  Serial.println("(Real HW: warm up 2 min before use)");
+}
+
+void loop() {
+  int gasLevel = analogRead(GAS_PIN);
+  int ppm = map(gasLevel, 0, 1023, 0, 1000);
+
+  Serial.print("Gas Level: ");
+  Serial.print(gasLevel);
+  Serial.print(" (~");
+  Serial.print(ppm);
+  Serial.print(" ppm)  Status: ");
+
+  if (gasLevel > ALARM_THRESH) {
+    Serial.println("!!! DANGER - GAS ALARM !!!");
+    digitalWrite(ALERT_LED, HIGH);
+  } else if (gasLevel > WARN_THRESH) {
+    Serial.println("WARNING - Gas detected");
+    digitalWrite(ALERT_LED, gasLevel % 200 < 100 ? HIGH : LOW); // blink
+  } else {
+    Serial.println("Clean air");
+    digitalWrite(ALERT_LED, LOW);
+  }
+
+  delay(500);
+}
+`,
+    challenge: 'Log the peak gas reading in a variable. Every 10 seconds print a summary: current level, peak level, and how many alarm events occurred. Reset the peak and count with a button on Pin 2.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('Gas') || l.includes('ppm') || l.includes('ALARM') || l.includes('Clean'));
+    },
+  },
+
+  {
+    id: 'thermistor',
+    icon: '🌡️',
+    title: 'Thermistor Temperature Sensor',
+    difficulty: 'intermediate',
+    xp: 60,
+    desc: 'Measure temperature with a cheap NTC thermistor using the Steinhart-Hart equation. No library needed!',
+    parts: ['Arduino Uno', '10kΩ NTC thermistor', '10kΩ resistor', 'Breadboard', 'Jumper wires'],
+    skills: ['analogRead()', 'math (log, exp)', 'Steinhart-Hart equation', 'voltage divider'],
+    components: [],
+    wiring: [
+      '5V → 10kΩ resistor → A0 (junction) → Thermistor → GND',
+      'Measure voltage at the junction between resistor and thermistor',
+    ],
+    theory: `
+## Thermistor Temperature Sensor
+
+A thermistor is a resistor whose resistance changes with temperature. An **NTC** (Negative Temperature Coefficient) thermistor **decreases** resistance as temperature rises.
+
+### Voltage Divider Circuit
+
+\`\`\`
+5V → [10kΩ fixed] → A0 → [10kΩ NTC thermistor] → GND
+\`\`\`
+
+At 25°C the thermistor ≈ 10kΩ, so A0 reads ≈ 512 (half of 1023).
+
+### Steinhart-Hart Equation
+
+This converts resistance to temperature:
+
+\`\`\`cpp
+float R = 10000.0 * (1023.0 / raw - 1.0);  // thermistor resistance
+float T = 1.0 / (log(R / 10000.0) / 3950.0 + 1.0 / 298.15) - 273.15;
+\`\`\`
+
+### Variables
+
+- **R** = thermistor resistance (Ω)
+- **B** = Beta constant (3950 for common 10kΩ NTC)
+- **R0** = nominal resistance at 25°C = 10000Ω
+- **T0** = 298.15 K (25°C in Kelvin)
+
+### Simulator
+Drag A0 slider to simulate temperature. Middle = room temp (~25°C).
+    `,
+    starterCode: `// NTC Thermistor Temperature Sensor
+// Simulator: drag A0 slider (left=cold, right=hot)
+// Circuit: 5V -> 10k fixed -> A0 -> 10k NTC -> GND
+
+const float BETA   = 3950.0;  // thermistor beta coefficient
+const float R0     = 10000.0; // nominal resistance at 25°C
+const float T0     = 298.15;  // 25°C in Kelvin
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Thermistor Temperature Monitor");
+  Serial.println("Drag A0 slider to simulate temp");
+}
+
+void loop() {
+  int raw = analogRead(A0);
+
+  // Calculate thermistor resistance
+  float R = R0 * (1023.0 / (float)raw - 1.0);
+
+  // Steinhart-Hart equation → Kelvin → Celsius
+  float tempK = 1.0 / (log(R / R0) / BETA + 1.0 / T0);
+  float tempC = tempK - 273.15;
+  float tempF = tempC * 9.0 / 5.0 + 32.0;
+
+  Serial.print("Raw: ");
+  Serial.print(raw);
+  Serial.print("  |  ");
+  Serial.print(tempC, 1);
+  Serial.print(" C  /  ");
+  Serial.print(tempF, 1);
+  Serial.println(" F");
+
+  delay(1000);
+}
+`,
+    challenge: 'Add a "heat alert": if temp goes above 35°C, blink Pin 13 every 200ms. If temp goes above 50°C, print "OVERHEAT!" and blink every 100ms. Below 35°C the LED stays off.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l => / \d+\.\d+ C/.test(l) || /°C|temp|Temp/i.test(l));
+    },
+  },
+
+  {
+    id: 'flame_sensor',
+    icon: '🔥',
+    title: 'Flame Sensor',
+    difficulty: 'beginner',
+    xp: 45,
+    desc: 'Detect open flames with an IR flame sensor module. Useful for fire robots, safety systems, and experiments.',
+    parts: ['Arduino Uno', 'Flame sensor module (IR detector)', '1x LED', '220Ω resistor'],
+    skills: ['digitalRead()', 'analogRead()', 'if/else', 'alarm output'],
+    components: [{ type: 'button', pin: 2 }],
+    wiring: [
+      'Flame Sensor VCC → 5V',
+      'Flame Sensor GND → GND',
+      'Flame Sensor DO (digital out) → Pin 2',
+      'Flame Sensor AO (analog out) → A0 (optional, for intensity)',
+      'LED (+) → 220Ω → Pin 13, LED (-) → GND',
+    ],
+    theory: `
+## Flame Sensor Module
+
+The flame sensor uses a **photodiode** sensitive to infrared light in the 760–1100 nm range — the wavelength emitted by open flames (candle, lighter, fire).
+
+### Outputs
+
+- **DO** — Digital output. Goes **LOW** when flame detected (adjustable via onboard potentiometer)
+- **AO** — Analog output. Lower voltage = flame closer/larger
+
+### Detection Distance
+
+- Candle: ~80 cm
+- Lighter: ~30 cm
+- Adjust sensitivity with the onboard potentiometer
+
+### Active LOW Behaviour
+
+Like INPUT_PULLUP buttons: pin reads **HIGH** normally, **LOW** when flame detected.
+
+\`\`\`cpp
+if (digitalRead(FLAME_PIN) == LOW) {
+  // FLAME DETECTED!
+}
+\`\`\`
+
+### Simulator
+The button on Pin 2 simulates the flame sensor. **Press = flame detected**.
+    `,
+    starterCode: `// Flame Sensor
+// Simulator: press button (Pin 2) to simulate flame detection
+// DO pin = LOW when flame detected (active LOW, like INPUT_PULLUP)
+
+const int FLAME_PIN  = 2;
+const int ALERT_LED  = 13;
+bool alarmActive = false;
+
+void setup() {
+  pinMode(FLAME_PIN, INPUT_PULLUP);
+  pinMode(ALERT_LED, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Flame Sensor Ready");
+  Serial.println("Press button to simulate flame detection");
+}
+
+void loop() {
+  int flameState = digitalRead(FLAME_PIN);
+
+  if (flameState == LOW) {  // Flame detected!
+    if (!alarmActive) {
+      Serial.println("!!! FLAME DETECTED — ALARM ON !!!");
+      alarmActive = true;
+    }
+    // Blink LED rapidly
+    digitalWrite(ALERT_LED, HIGH);
+    delay(100);
+    digitalWrite(ALERT_LED, LOW);
+    delay(100);
+  } else {
+    if (alarmActive) {
+      Serial.println("Flame gone — alarm off");
+      alarmActive = false;
+    }
+    digitalWrite(ALERT_LED, LOW);
+    delay(200);
+  }
+}
+`,
+    challenge: 'Track how many separate flame events occur and print a log: "Event #N detected at Xs" (using millis()/1000 for time). Also count the total on-time in seconds and print it when the flame goes out.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('FLAME') || l.includes('flame') || l.includes('alarm'));
+    },
+  },
+
+  {
+    id: 'rain_sensor',
+    icon: '🌧️',
+    title: 'Rain / Water Level Sensor',
+    difficulty: 'beginner',
+    xp: 45,
+    desc: 'Detect rain or measure water level with a simple resistive sensor. Great for automatic windows, plant watering alerts, and weather stations.',
+    parts: ['Arduino Uno', 'Rain/water sensor module', 'Jumper wires'],
+    skills: ['analogRead()', 'map()', 'thresholding', 'Serial output'],
+    components: [],
+    wiring: [
+      'Sensor VCC → 5V (or use digital pin to power only during reading)',
+      'Sensor GND → GND',
+      'Sensor AO → A0',
+      'Sensor DO → Pin 2 (digital threshold)',
+    ],
+    theory: `
+## Rain / Water Level Sensor
+
+The sensor has a grid of **exposed PCB traces**. Water bridges the traces, reducing resistance. The module outputs:
+
+- **AO** — Analog: 0 = submerged, 1023 = completely dry
+- **DO** — Digital: LOW = water detected (adjustable threshold)
+
+### Reading Level
+
+\`\`\`cpp
+int raw = analogRead(A0);
+// Dry = 1023, Wet = ~300 or less
+int pct = map(raw, 1023, 300, 0, 100);
+pct = constrain(pct, 0, 100);
+\`\`\`
+
+### Power Saving Tip
+
+Power the sensor only when reading (connect VCC to a digital output pin):
+
+\`\`\`cpp
+digitalWrite(POWER_PIN, HIGH);
+delay(10);
+int raw = analogRead(SENSOR_PIN);
+digitalWrite(POWER_PIN, LOW);
+\`\`\`
+
+This extends the sensor's life by preventing electrolysis corrosion.
+
+### Simulator
+Drag A0 slider to simulate rain intensity. Left = dry (high raw), right = heavy rain (low raw).
+    `,
+    starterCode: `// Rain / Water Level Sensor
+// Simulator: drag A0 slider (left=dry, right=heavy rain)
+// Dry ~1023, light rain ~600, heavy rain ~300
+
+const int SENSOR_PIN = A0;
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Rain Sensor Monitor");
+  Serial.println("Drag A0 to simulate rain levels");
+}
+
+void loop() {
+  int raw = analogRead(SENSOR_PIN);
+  int pct = map(raw, 1023, 300, 0, 100);
+  pct = constrain(pct, 0, 100);
+
+  Serial.print("Raw: ");
+  Serial.print(raw);
+  Serial.print(" | Rain: ");
+  Serial.print(pct);
+  Serial.print("%  | ");
+
+  if (pct < 10)       Serial.println("DRY");
+  else if (pct < 30)  Serial.println("Light drizzle");
+  else if (pct < 70)  Serial.println("Moderate rain");
+  else                Serial.println("HEAVY RAIN");
+
+  delay(600);
+}
+`,
+    challenge: 'Make the rain sensor trigger an "automatic window" alert: when rain > 40%, print "CLOSE WINDOW!" once (not repeatedly). When it drops below 20%, print "Window safe to open" once. Use a state variable to prevent repeated messages.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('Rain') || l.includes('rain') || l.includes('DRY') || l.includes('HEAVY'));
+    },
+  },
+
+  {
+    id: 'touch_sensor_ttp',
+    icon: '👆',
+    title: 'Capacitive Touch Sensor (TTP223)',
+    difficulty: 'beginner',
+    xp: 45,
+    desc: 'Add touch sensing to your project with the TTP223 capacitive touch module — no moving parts, just a finger tap.',
+    parts: ['Arduino Uno', 'TTP223 touch sensor module', '1x LED', '220Ω resistor'],
+    skills: ['digitalRead()', 'toggle logic', 'debouncing', 'state machines'],
+    components: [{ type: 'button', pin: 3 }],
+    wiring: [
+      'TTP223 VCC → 3.3V or 5V',
+      'TTP223 GND → GND',
+      'TTP223 OUT → Pin 3',
+      'LED (+) → 220Ω → Pin 13, LED (-) → GND',
+    ],
+    theory: `
+## Capacitive Touch Sensor (TTP223)
+
+The TTP223 detects the change in capacitance when a human finger touches the pad. Unlike mechanical buttons, there are **no moving parts** — just a metal pad.
+
+### Output Behaviour
+
+- **Default (A=0, B=0):** Touch = HIGH, No touch = LOW
+- Active HIGH (opposite of INPUT_PULLUP buttons)
+- Response time: ~50 ms
+
+### Toggle vs. Momentary
+
+You can configure the chip:
+
+| Mode | Behaviour |
+|------|-----------|
+| Momentary (default) | HIGH while touching |
+| Toggle | Latches HIGH on first touch, LOW on second |
+
+Solder the A pad to enable toggle mode.
+
+### Debouncing
+
+Even capacitive sensors can glitch. A simple software debounce:
+
+\`\`\`cpp
+if (digitalRead(TOUCH) == HIGH) {
+  delay(50);
+  if (digitalRead(TOUCH) == HIGH) {
+    // Confirmed touch
+  }
+}
+\`\`\`
+
+### Simulator
+The button on Pin 3 simulates the touch sensor. Hold = touching, release = lifted.
+    `,
+    starterCode: `// TTP223 Capacitive Touch Sensor
+// Simulator: press and hold button (Pin 3) = finger on sensor
+// TTP223 output: HIGH = touched, LOW = not touched
+
+const int TOUCH_PIN = 3;
+const int LED_PIN   = 13;
+
+bool ledState     = false;
+bool lastTouch    = false;
+
+void setup() {
+  pinMode(TOUCH_PIN, INPUT);
+  pinMode(LED_PIN, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Touch Sensor — tap to toggle LED");
+}
+
+void loop() {
+  bool touched = digitalRead(TOUCH_PIN) == HIGH;
+
+  // Rising edge detection — toggle on each new touch
+  if (touched && !lastTouch) {
+    ledState = !ledState;
+    digitalWrite(LED_PIN, ledState ? HIGH : LOW);
+    Serial.print("Touched! LED is now ");
+    Serial.println(ledState ? "ON" : "OFF");
+    delay(50); // simple debounce
+  }
+
+  lastTouch = touched;
+  delay(10);
+}
+`,
+    challenge: 'Count touches and implement multi-tap actions: 1 tap = LED on/off, 2 rapid taps (< 400ms apart) = blink 5 times, 3 rapid taps = LED off + print "Night mode". Print the current mode to Serial.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('Touch') || l.includes('LED') || l.includes('tap'));
+    },
+  },
+
+  {
+    id: 'tilt_switch',
+    icon: '↗️',
+    title: 'Tilt Switch / Ball Switch',
+    difficulty: 'beginner',
+    xp: 40,
+    desc: 'Detect orientation and tilting with a simple tilt switch. Build shake alarms and orientation-aware projects.',
+    parts: ['Arduino Uno', 'Tilt switch (SW-200D or mercury switch)', '10kΩ resistor', '1x LED', '220Ω resistor'],
+    skills: ['digitalRead()', 'INPUT_PULLUP', 'orientation detection', 'edge detection'],
+    components: [{ type: 'button', pin: 4 }],
+    wiring: [
+      'One leg of tilt switch → Pin 4',
+      'Other leg of tilt switch → GND',
+      'Use INPUT_PULLUP — no external resistor needed',
+      'LED (+) → 220Ω → Pin 13, LED (-) → GND',
+    ],
+    theory: `
+## Tilt Switch (Ball Switch)
+
+A tilt switch contains a small metal ball in a tube. When the tube is tilted one way, the ball rolls to close the circuit. Tilt the other way, the ball rolls away and the circuit opens.
+
+### SW-200D Characteristics
+
+| Orientation | State |
+|-------------|-------|
+| Vertical (upright) | Closed (conductive) |
+| Horizontal / inverted | Open |
+
+### Using INPUT_PULLUP
+
+Wire one leg to the pin, the other to GND. Use INPUT_PULLUP:
+
+\`\`\`cpp
+pinMode(TILT_PIN, INPUT_PULLUP);
+// Closed (upright) = LOW
+// Open (tilted) = HIGH
+\`\`\`
+
+### Shake Detection
+
+Sample the pin rapidly. If it toggles multiple times in < 500ms, it's being shaken:
+
+\`\`\`cpp
+static int shakeCount = 0;
+static unsigned long shakeWindow = 0;
+if (millis() - shakeWindow > 500) { shakeWindow = millis(); shakeCount = 0; }
+if (edgeDetected) shakeCount++;
+if (shakeCount > 5) { /* shaking! */ }
+\`\`\`
+
+### Simulator
+The button on Pin 4 simulates the tilt switch. **Pressed** = upright (closed), **Released** = tilted (open).
+    `,
+    starterCode: `// Tilt Switch / Ball Switch
+// Simulator: press button (Pin 4) = upright, release = tilted
+// INPUT_PULLUP: upright=LOW, tilted=HIGH
+
+const int TILT_PIN = 4;
+const int LED_PIN  = 13;
+
+bool lastState   = false;
+int  tiltCount   = 0;
+
+void setup() {
+  pinMode(TILT_PIN, INPUT_PULLUP);
+  pinMode(LED_PIN, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Tilt Switch Monitor");
+  Serial.println("Press = upright | Release = tilted");
+}
+
+void loop() {
+  bool tilted = digitalRead(TILT_PIN) == HIGH; // HIGH = tilted (open circuit)
+
+  if (tilted != lastState) {
+    lastState = tilted;
+    if (tilted) {
+      tiltCount++;
+      Serial.print("TILTED (event #");
+      Serial.print(tiltCount);
+      Serial.println(")");
+      digitalWrite(LED_PIN, HIGH);
+    } else {
+      Serial.println("Upright");
+      digitalWrite(LED_PIN, LOW);
+    }
+  }
+
+  delay(20);
+}
+`,
+    challenge: 'Implement shake detection: if the tilt switch changes state 6 or more times within 1 second (using millis()), print "SHAKING DETECTED!" and count total shake events. Reset the counter each second.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('TILT') || l.includes('Tilt') || l.includes('Upright') || l.includes('tilt'));
+    },
+  },
+
+  {
+    id: 'hall_effect',
+    icon: '🧲',
+    title: 'Hall Effect Sensor (A3144)',
+    difficulty: 'beginner',
+    xp: 50,
+    desc: 'Detect magnetic fields with a Hall effect sensor. Use it for RPM measurement, proximity detection, and door sensors.',
+    parts: ['Arduino Uno', 'A3144 Hall effect sensor (or similar)', '10kΩ pull-up resistor', 'Small magnet'],
+    skills: ['digitalRead()', 'INPUT_PULLUP', 'RPM calculation', 'millis()'],
+    components: [{ type: 'button', pin: 5 }],
+    wiring: [
+      'Hall Sensor Pin 1 (VCC) → 5V',
+      'Hall Sensor Pin 2 (GND) → GND',
+      'Hall Sensor Pin 3 (OUT) → Pin 5 and 10kΩ to 5V',
+      'Or use INPUT_PULLUP and skip external resistor',
+    ],
+    theory: `
+## Hall Effect Sensor (A3144)
+
+The Hall effect sensor detects **magnetic fields**. When a magnet passes nearby, it triggers the output.
+
+### A3144 Characteristics
+
+- **Output type:** Open-collector (active LOW — needs pull-up resistor)
+- **Supply:** 4.5–24V
+- **Sensitivity:** Triggers on South pole (or strong enough North depending on orientation)
+
+### Applications
+
+- **RPM meter:** Attach a magnet to a spinning shaft. Count pulses per second → calculate RPM
+- **Door sensor:** Magnet on door, sensor on frame → detect open/close
+- **Proximity switch:** No physical contact needed
+
+### RPM Calculation
+
+\`\`\`cpp
+// 1 magnet per revolution:
+// RPM = (pulses per minute)
+// If 1 pulse per revolution:
+// RPM = 60000 / (time between pulses in ms)
+\`\`\`
+
+### Simulator
+The button on Pin 5 simulates the magnet passing the sensor. Each button press = one revolution pulse.
+    `,
+    starterCode: `// Hall Effect Sensor — RPM Meter
+// Simulator: press button (Pin 5) to simulate magnet passing
+// Each button press = one revolution
+
+const int HALL_PIN = 5;
+const int LED_PIN  = 13;
+
+volatile int pulseCount = 0;
+unsigned long lastCalc  = 0;
+bool lastState          = HIGH;
+
+void setup() {
+  pinMode(HALL_PIN, INPUT_PULLUP);
+  pinMode(LED_PIN, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Hall Effect RPM Meter");
+  Serial.println("Press button to simulate shaft rotation");
+}
+
+void loop() {
+  // Edge detection (falling edge = magnet detected)
+  bool state = digitalRead(HALL_PIN);
+  if (state == LOW && lastState == HIGH) {
+    pulseCount++;
+    digitalWrite(LED_PIN, HIGH);
+    delay(20);
+    digitalWrite(LED_PIN, LOW);
+  }
+  lastState = state;
+
+  // Calculate and print RPM every second
+  if (millis() - lastCalc >= 1000) {
+    int rpm = pulseCount * 60;  // pulses per second × 60 = RPM
+    Serial.print("Pulses: ");
+    Serial.print(pulseCount);
+    Serial.print("  |  RPM: ");
+    Serial.println(rpm);
+    pulseCount  = 0;
+    lastCalc    = millis();
+  }
+}
+`,
+    challenge: 'Add RPM averaging: store the last 5 RPM readings in an array and print the rolling average alongside the instant RPM. Also add a "max RPM" tracker that shows the highest RPM recorded.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('RPM') || l.includes('Pulse') || l.includes('pulse'));
+    },
+  },
+
+  {
+    id: 'sd_card',
+    icon: '💾',
+    title: 'SD Card Data Logger',
+    difficulty: 'advanced',
+    xp: 90,
+    desc: 'Log sensor data to a MicroSD card for long-term storage. Build a temperature or environmental data logger.',
+    parts: ['Arduino Uno', 'MicroSD card module', 'MicroSD card (FAT32 formatted)', 'Sensor (any analog)', 'Jumper wires'],
+    skills: ['SD library', 'SPI', 'File I/O', 'millis() timestamps', 'CSV format'],
+    components: [],
+    wiring: [
+      'SD Module VCC → 5V',
+      'SD Module GND → GND',
+      'SD Module MOSI → Pin 11',
+      'SD Module MISO → Pin 12',
+      'SD Module SCK → Pin 13',
+      'SD Module CS → Pin 10',
+      'Format SD card as FAT32 before use!',
+    ],
+    theory: `
+## SD Card Data Logger
+
+The Arduino SD library writes to FAT16/FAT32 formatted cards over SPI. This lets you **log sensor data** to a file that you can later open in Excel or any text editor.
+
+### SPI Pins (Uno)
+
+| Signal | Pin |
+|--------|-----|
+| MOSI | 11 |
+| MISO | 12 |
+| SCK | 13 |
+| CS (Chip Select) | 10 |
+
+### Basic Usage
+
+\`\`\`cpp
+#include <SD.h>
+const int CS_PIN = 10;
+
+void setup() {
+  SD.begin(CS_PIN);
+  File f = SD.open("log.csv", FILE_WRITE);
+  f.println("Time,Sensor");
+  f.close();
+}
+
+void loop() {
+  File f = SD.open("log.csv", FILE_WRITE);
+  f.print(millis()); f.print(",");
+  f.println(analogRead(A0));
+  f.close();
+}
+\`\`\`
+
+### Best Practices
+
+- Always call \`f.close()\` after writing — data is only saved on close!
+- Write in **CSV format** for easy spreadsheet import
+- Add column headers in \`setup()\`
+- Use \`millis()\` for timestamps (or add an RTC module)
+
+### Simulator Note
+Since there's no SD widget, this lesson uses Serial to simulate file output. On real hardware, use the SD library.
+    `,
+    starterCode: `// SD Card Data Logger
+// Simulator: logs to Serial (mimics file output)
+// Real HW: #include <SD.h> — SD.begin(10), SD.open("log.csv")
+
+// Simulated "file" via Serial
+const int SENSOR_PIN = A0;
+
+unsigned long logInterval = 2000; // log every 2 seconds
+unsigned long lastLog     = 0;
+int logCount              = 0;
+
+void writeHeader() {
+  Serial.println("=== DATA LOG START ===");
+  Serial.println("Index,Time_ms,SensorRaw,SensorPct");
+}
+
+void logData() {
+  logCount++;
+  int raw = analogRead(SENSOR_PIN);
+  int pct = map(raw, 0, 1023, 0, 100);
+  Serial.print(logCount);
+  Serial.print(",");
+  Serial.print(millis());
+  Serial.print(",");
+  Serial.print(raw);
+  Serial.print(",");
+  Serial.println(pct);
+}
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("SD Card Data Logger (simulated)");
+  Serial.println("Drag A0 slider to change sensor value");
+  writeHeader();
+}
+
+void loop() {
+  if (millis() - lastLog >= logInterval) {
+    lastLog = millis();
+    logData();
+  }
+}
+`,
+    challenge: 'Add statistics: every 10 log entries, compute and print the MIN, MAX, and AVERAGE of the sensor readings for that batch. Reset the batch after printing. Use an array of size 10 to store the batch.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        /\d+,\d+,\d+/.test(l) || l.includes('LOG') || l.includes('Index'));
+    },
+  },
+
+  {
+    id: 'ir_obstacle_line',
+    icon: '🚗',
+    title: 'Line Following with IR Sensors',
+    difficulty: 'intermediate',
+    xp: 70,
+    desc: 'Build a line-following robot using two IR reflectance sensors. Understand differential drive, PID basics, and autonomous navigation.',
+    parts: ['Arduino Uno', '2× TCRT5000 IR reflectance sensors', 'L298N motor driver', '2× DC motors', 'Chassis + wheels', 'Battery pack'],
+    skills: ['digitalRead()', 'differential drive', 'if/else logic', 'motor control', 'autonomous behaviour'],
+    components: [{ type: 'button', pin: 2 }, { type: 'button', pin: 3 }],
+    wiring: [
+      'Left IR Sensor OUT → Pin 2',
+      'Right IR Sensor OUT → Pin 3',
+      'Both sensors: VCC → 5V, GND → GND',
+      'L298N IN1 → Pin 8, IN2 → Pin 9 (left motor)',
+      'L298N IN3 → Pin 10, IN4 → Pin 11 (right motor)',
+      'L298N ENA/ENB → 5V (or PWM pins for speed control)',
+    ],
+    theory: `
+## Line Following Robot
+
+IR reflectance sensors shine IR light and measure reflection. A **black line** absorbs IR (low reflection = LOW output), while a **white surface** reflects IR (high reflection = HIGH output).
+
+### Sensor Logic (Active LOW common)
+
+| Left | Right | Action |
+|------|-------|--------|
+| OFF (white) | OFF (white) | Go straight |
+| ON (black) | OFF (white) | Turn right |
+| OFF (white) | ON (black) | Turn left |
+| ON (black) | ON (black) | Stop / at junction |
+
+### Differential Drive
+
+Control direction by running motors at different speeds:
+- **Forward:** Both motors forward
+- **Turn left:** Right motor forward, left motor slow/stop
+- **Turn right:** Left motor forward, right motor slow/stop
+
+\`\`\`cpp
+void goForward()  { leftFwd(); rightFwd(); }
+void turnLeft()   { leftStop(); rightFwd(); }
+void turnRight()  { leftFwd(); rightStop(); }
+\`\`\`
+
+### Simulator
+Button on Pin 2 = left sensor on line. Button on Pin 3 = right sensor on line. Watch the Serial Monitor to see the robot's decisions.
+    `,
+    starterCode: `// Line Following Robot — 2 IR Sensors
+// Simulator: Pin2 button = left sensor on black line
+//            Pin3 button = right sensor on black line
+// Active LOW: button pressed = sensor on line (LOW)
+
+const int L_SENSOR = 2;
+const int R_SENSOR = 3;
+
+// Motor pins (simulated with Serial output)
+void goForward() { Serial.println(">>> FORWARD"); }
+void turnLeft()  { Serial.println("<<< TURN LEFT"); }
+void turnRight() { Serial.println("TURN RIGHT >>>"); }
+void stopRobot() { Serial.println("--- STOP ---"); }
+
+void setup() {
+  pinMode(L_SENSOR, INPUT_PULLUP);
+  pinMode(R_SENSOR, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("Line Following Robot");
+  Serial.println("Pin2 btn = left on line | Pin3 btn = right on line");
+}
+
+void loop() {
+  bool leftOnLine  = (digitalRead(L_SENSOR) == LOW);
+  bool rightOnLine = (digitalRead(R_SENSOR) == LOW);
+
+  if (!leftOnLine && !rightOnLine) {
+    goForward();
+  } else if (leftOnLine && !rightOnLine) {
+    turnRight();
+  } else if (!leftOnLine && rightOnLine) {
+    turnLeft();
+  } else {
+    stopRobot(); // Both on line = junction or cross
+  }
+
+  delay(100);
+}
+`,
+    challenge: 'Add speed control: when going forward, use full speed. When turning, use 60% speed for the outer motor and 0% for the inner. Simulate by printing "FORWARD 100%" vs "L-TURN: Left=0% Right=60%". Track total junctions encountered.',
+    validate(state) {
+      return state.serialUsed && state.serialLines.some(l =>
+        l.includes('FORWARD') || l.includes('TURN') || l.includes('STOP'));
+    },
   },
 
 ];
